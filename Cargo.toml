@@ -1,0 +1,25 @@
+[package]
+name = "shabalLibrary"
+version = "0.1.0"
+authors = ["Harry Phillips <harryjamesphillips@gmail.com>"]
+edition = "2018"
+build = "build.rs"
+
+[lib]
+name = "shabal_lib"
+crate-type = ["dylib"]
+
+[features]
+simd = []
+neon = []
+
+[dependencies]
+libc = "0.2"
+
+cfg-if = "0.1"
+hex = "0.3"
+
+[build-dependencies]
+cc = "1.0"
+cfg-if = "0.1"
+cbindgen = "0.7.1"
