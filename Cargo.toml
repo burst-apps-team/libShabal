@@ -6,7 +6,7 @@ edition = "2018"
 build = "build.rs"
 
 [lib]
-name = "shabal_lib"
+name = "shabal"
 crate-type = ["dylib"]
 
 [features]

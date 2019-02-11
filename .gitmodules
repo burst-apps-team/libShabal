@@ -1,0 +1,3 @@
+[submodule "scavenger"]
+	path = scavenger
+	url = https://github.com/PoC-Consortium/scavenger
