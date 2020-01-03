@@ -1,17 +1,16 @@
 extern crate libc;
-use libc::{c_char, uint64_t};
 #[macro_use]
 extern crate cfg_if;
-
+use libc::{c_char};
 use std::u64;
 
 extern "C" {
     pub fn find_best_deadline_sph(
         scoops: *const c_char,
-        nonce_count: uint64_t,
+        nonce_count: u64,
         gensig: *const c_char,
-        best_deadline: *mut uint64_t,
-        best_offset: *mut uint64_t,
+        best_deadline: *mut u64,
+        best_offset: *mut u64,
     ) -> ();
 }
 
@@ -21,37 +20,37 @@ cfg_if! {
             pub fn init_shabal_avx512f() -> ();
             pub fn find_best_deadline_avx512f(
                 scoops: *const c_char,
-                nonce_count: uint64_t,
+                nonce_count: u64,
                 gensig: *const c_char,
-                best_deadline: *mut uint64_t,
-                best_offset: *mut uint64_t,
+                best_deadline: *mut u64,
+                best_offset: *mut u64,
             ) -> ();
 
             pub fn init_shabal_avx2() -> ();
             pub fn find_best_deadline_avx2(
                 scoops: *const c_char,
-                nonce_count: uint64_t,
+                nonce_count: u64,
                 gensig: *const c_char,
-                best_deadline: *mut uint64_t,
-                best_offset: *mut uint64_t,
+                best_deadline: *mut u64,
+                best_offset: *mut u64,
             ) -> ();
 
             pub fn init_shabal_avx() -> ();
             pub fn find_best_deadline_avx(
                 scoops: *const c_char,
-                nonce_count: uint64_t,
+                nonce_count: u64,
                 gensig: *const c_char,
-                best_deadline: *mut uint64_t,
-                best_offset: *mut uint64_t,
+                best_deadline: *mut u64,
+                best_offset: *mut u64,
             ) -> ();
 
             pub fn init_shabal_sse2() -> ();
             pub fn find_best_deadline_sse2(
                 scoops: *const c_char,
-                nonce_count: uint64_t,
+                nonce_count: u64,
                 gensig: *const c_char,
-                best_deadline: *mut uint64_t,
-                best_offset: *mut uint64_t,
+                best_deadline: *mut u64,
+                best_offset: *mut u64,
             ) -> ();
         }
     }
@@ -63,10 +62,10 @@ cfg_if! {
             pub fn init_shabal_neon() -> ();
             pub fn find_best_deadline_neon(
                 scoops: *const c_char,
-                nonce_count: uint64_t,
+                nonce_count: u64,
                 gensig: *const c_char,
-                best_deadline: *mut uint64_t,
-                best_offset: *mut uint64_t,
+                best_deadline: *mut u64,
+                best_offset: *mut u64,
             ) -> ();
         }
     }
@@ -75,10 +74,10 @@ cfg_if! {
 #[no_mangle]
 pub extern fn shabal_findBestDeadlineDirect(
     scoops: *const c_char,
-    nonce_count: uint64_t,
+    nonce_count: u64,
     gensig: *const c_char,
-    best_deadline: *mut uint64_t,
-    best_offset: *mut uint64_t,
+    best_deadline: *mut u64,
+    best_offset: *mut u64,
 ) {
     #[cfg(feature = "simd")]
         unsafe {
@@ -190,9 +189,9 @@ pub extern fn shabal_init() {
 #[no_mangle]
 pub extern fn shabal_findBestDeadline(
     scoops: *const c_char,
-    nonce_count: uint64_t,
+    nonce_count: u64,
     gensig: *const c_char,
-) -> uint64_t {
+) -> u64 {
     let mut deadline: u64 = u64::MAX;
     let mut offset: u64 = 0;
     shabal_findBestDeadlineDirect(scoops, nonce_count, gensig, &mut deadline, &mut offset);
