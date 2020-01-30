@@ -1,6 +1,7 @@
 extern crate libc;
 #[macro_use]
 extern crate cfg_if;
+use std::sync::{Once};
 use libc::{c_char};
 use std::u64;
 
@@ -161,29 +162,32 @@ pub extern fn shabal_findBestDeadlineDirect(
 
 #[no_mangle]
 pub extern fn shabal_init() {
-    #[cfg(feature = "simd")]
-    unsafe {
-        if is_x86_feature_detected!("avx512f") {
-            init_shabal_avx512f();
-        } else if is_x86_feature_detected!("avx2") {
-            init_shabal_avx2();
-        } else if is_x86_feature_detected!("avx") {
-            init_shabal_avx();
-        } else if is_x86_feature_detected!("sse2") {
-            init_shabal_sse2();
+    static INITIALIZE: Once = Once::new();
+    INITIALIZE.call_once(|| {
+        #[cfg(feature = "simd")]
+            unsafe {
+            if is_x86_feature_detected!("avx512f") {
+                init_shabal_avx512f();
+            } else if is_x86_feature_detected!("avx2") {
+                init_shabal_avx2();
+            } else if is_x86_feature_detected!("avx") {
+                init_shabal_avx();
+            } else if is_x86_feature_detected!("sse2") {
+                init_shabal_sse2();
+            }
         }
-    }
-    #[cfg(feature = "neon")]
-    unsafe {
-        #[cfg(target_arch = "arm")]
-        let neon = is_arm_feature_detected!("neon");
-        #[cfg(target_arch = "aarch64")]
-        let neon = true;
+        #[cfg(feature = "neon")]
+            unsafe {
+            #[cfg(target_arch = "arm")]
+                let neon = is_arm_feature_detected!("neon");
+            #[cfg(target_arch = "aarch64")]
+                let neon = true;
 
-        if neon {
-            init_shabal_neon();
+            if neon {
+                init_shabal_neon();
+            }
         }
-    }
+    });
 }
 
 #[no_mangle]
