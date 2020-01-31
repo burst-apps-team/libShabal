@@ -2,15 +2,15 @@ extern crate libc;
 #[macro_use]
 extern crate cfg_if;
 use std::sync::{Once};
-use libc::{c_char};
 use std::{u64, slice};
 use shabal::{Shabal256, Digest};
+use std::os::raw::c_void;
 
 extern "C" {
     pub fn find_best_deadline_sph(
-        scoops: *const c_char,
+        scoops: *const u8,
         nonce_count: u64,
-        gensig: *const c_char,
+        gensig: *const u8,
         best_deadline: *mut u64,
         best_offset: *mut u64,
     ) -> ();
@@ -21,36 +21,36 @@ cfg_if! {
         extern "C" {
             pub fn init_shabal_avx512f() -> ();
             pub fn find_best_deadline_avx512f(
-                scoops: *const c_char,
+                scoops: *const u8,
                 nonce_count: u64,
-                gensig: *const c_char,
+                gensig: *const u8,
                 best_deadline: *mut u64,
                 best_offset: *mut u64,
             ) -> ();
 
             pub fn init_shabal_avx2() -> ();
             pub fn find_best_deadline_avx2(
-                scoops: *const c_char,
+                scoops: *const u8,
                 nonce_count: u64,
-                gensig: *const c_char,
+                gensig: *const u8,
                 best_deadline: *mut u64,
                 best_offset: *mut u64,
             ) -> ();
 
             pub fn init_shabal_avx() -> ();
             pub fn find_best_deadline_avx(
-                scoops: *const c_char,
+                scoops: *const u8,
                 nonce_count: u64,
-                gensig: *const c_char,
+                gensig: *const u8,
                 best_deadline: *mut u64,
                 best_offset: *mut u64,
             ) -> ();
 
             pub fn init_shabal_sse2() -> ();
             pub fn find_best_deadline_sse2(
-                scoops: *const c_char,
+                scoops: *const u8,
                 nonce_count: u64,
-                gensig: *const c_char,
+                gensig: *const u8,
                 best_deadline: *mut u64,
                 best_offset: *mut u64,
             ) -> ();
@@ -63,9 +63,9 @@ cfg_if! {
         extern "C" {
             pub fn init_shabal_neon() -> ();
             pub fn find_best_deadline_neon(
-                scoops: *const c_char,
+                scoops: *const u8,
                 nonce_count: u64,
-                gensig: *const c_char,
+                gensig: *const u8,
                 best_deadline: *mut u64,
                 best_offset: *mut u64,
             ) -> ();
@@ -75,9 +75,9 @@ cfg_if! {
 
 #[no_mangle]
 pub extern fn shabal_findBestDeadlineDirect(
-    scoops: *const c_char,
+    scoops: *const u8,
     nonce_count: u64,
-    gensig: *const c_char,
+    gensig: *const u8,
     best_deadline: *mut u64,
     best_offset: *mut u64,
 ) {
@@ -193,9 +193,9 @@ pub extern fn shabal_init() {
 
 #[no_mangle]
 pub extern fn shabal_findBestDeadline(
-    scoops: *const c_char,
+    scoops: *const u8,
     nonce_count: u64,
-    gensig: *const c_char,
+    gensig: *const u8,
 ) -> u64 {
     let mut deadline: u64 = u64::MAX;
     let mut offset: u64 = 0;
@@ -204,27 +204,27 @@ pub extern fn shabal_findBestDeadline(
 }
 
 #[no_mangle]
-pub extern fn shabal256_new() -> *mut Shabal256 {
+pub extern fn shabal256_new() -> *mut c_void {
     let mut shabal = Shabal256::new();
-    return Box::into_raw(Box::new(shabal));
+    return Box::into_raw(Box::new(shabal)) as *mut c_void;
 }
 
 #[no_mangle]
-pub extern fn shabal256_destroy(shabal: *mut Shabal256) {
+pub extern fn shabal256_destroy(shabal: *mut c_void) {
     if !shabal.is_null() {
         unsafe {
             // Let it fall out of scope naturally once it is unboxed
-            Box::from_raw(shabal);
+            Box::from_raw(shabal as *mut Shabal256);
         }
     }
 }
 
 #[no_mangle]
-pub extern fn shabal256_update(shabal: *mut Shabal256, data: *const u8, data_len: usize) {
+pub extern fn shabal256_update(shabal: *mut c_void, data: *const u8, data_len: usize) {
     if !shabal.is_null() {
         unsafe {
             let array = slice::from_raw_parts(data, data_len as usize);
-            let mut shabal_borrowed = &mut *shabal;
+            let shabal_borrowed = &mut *(shabal as *mut Shabal256);
             shabal_borrowed.input(array);
         }
     }
@@ -232,13 +232,13 @@ pub extern fn shabal256_update(shabal: *mut Shabal256, data: *const u8, data_len
 
 /// Buffer must have 32 bytes available from the offset
 #[no_mangle]
-pub extern fn shabal256_digest(shabal: *mut Shabal256, buffer: *mut u8, buffer_len: usize, offset: usize) {
+pub extern fn shabal256_digest(shabal: *mut c_void, buffer: *mut u8, buffer_len: usize, offset: usize) {
     if !shabal.is_null() {
         unsafe {
             let array = slice::from_raw_parts_mut(buffer, buffer_len as usize);
-            let mut shabal_borrowed = &mut *shabal;
+            let shabal_borrowed = &mut *(shabal as *mut Shabal256);
             let result = shabal_borrowed.result_reset();
-            for i in 0..31 {
+            for i in 0..32 {
                 array[offset + i] = result[i];
             }
         }
