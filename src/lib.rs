@@ -203,12 +203,19 @@ pub extern fn shabal_findBestDeadline(
     return offset;
 }
 
+/// Create a new Shabal256 instance
+///
+/// Returns a pointer to the instance, which
+/// can be used with the other functions to
+/// manipulate the instance.
 #[no_mangle]
 pub extern fn shabal256_new() -> *mut c_void {
-    let mut shabal = Shabal256::new();
-    return Box::into_raw(Box::new(shabal)) as *mut c_void;
+    return Box::into_raw(Box::new(Shabal256::new())) as *mut c_void;
 }
 
+/// Destroy a Shabal256 instance, clearing memory allocated for it.
+///
+/// `shabal` is the pointer to the instance returned from `shabal256_new()`
 #[no_mangle]
 pub extern fn shabal256_destroy(shabal: *mut c_void) {
     if !shabal.is_null() {
@@ -219,28 +226,47 @@ pub extern fn shabal256_destroy(shabal: *mut c_void) {
     }
 }
 
+/// Reset a Shabal256 instance to its initial state
+///
+/// `shabal` is the pointer to the instance returned from `shabal256_new()`
 #[no_mangle]
-pub extern fn shabal256_update(shabal: *mut c_void, data: *const u8, data_len: usize) {
+pub extern fn shabal256_reset(shabal: *mut c_void) {
     if !shabal.is_null() {
         unsafe {
-            let array = slice::from_raw_parts(data, data_len as usize);
+            let shabal_borrowed = &mut *(shabal as *mut Shabal256);
+            shabal_borrowed.reset();
+        }
+    }
+}
+
+/// Update a Shabal256 instance with new input data
+///
+/// `shabal` is the pointer to the instance returned from `shabal256_new()`
+///
+/// Inputs data into the digest from `data` starting at `offset` of length `len`
+#[no_mangle]
+pub extern fn shabal256_update(shabal: *mut c_void, data: *const u8, offset: usize, len: usize) {
+    if !shabal.is_null() {
+        unsafe {
+            let array = slice::from_raw_parts(data.add(offset), len as usize);
             let shabal_borrowed = &mut *(shabal as *mut Shabal256);
             shabal_borrowed.input(array);
         }
     }
 }
 
-/// Buffer must have 32 bytes available from the offset
+/// Retrieve the result of a Shabal256 digest and reset the digest.
+///
+/// Stores the data in `buffer` starting from `offset`. Stores 32 bytes of hash data.
+///
+/// `buffer` must have 32 bytes available from `offset` otherwise this will attempt to write beyond the array.
 #[no_mangle]
-pub extern fn shabal256_digest(shabal: *mut c_void, buffer: *mut u8, buffer_len: usize, offset: usize) {
+pub extern fn shabal256_digest(shabal: *mut c_void, buffer: *mut u8, offset: usize) {
     if !shabal.is_null() {
         unsafe {
-            let array = slice::from_raw_parts_mut(buffer, buffer_len as usize);
+            let array = slice::from_raw_parts_mut(buffer.add(offset), 32);
             let shabal_borrowed = &mut *(shabal as *mut Shabal256);
-            let result = shabal_borrowed.result_reset();
-            for i in 0..32 {
-                array[offset + i] = result[i];
-            }
+            array.copy_from_slice(shabal_borrowed.result_reset().as_slice());
         }
     }
 }
