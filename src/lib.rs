@@ -3,7 +3,8 @@ extern crate libc;
 extern crate cfg_if;
 use std::sync::{Once};
 use libc::{c_char};
-use std::u64;
+use std::{u64, slice};
+use shabal::{Shabal256, Digest};
 
 extern "C" {
     pub fn find_best_deadline_sph(
@@ -200,4 +201,46 @@ pub extern fn shabal_findBestDeadline(
     let mut offset: u64 = 0;
     shabal_findBestDeadlineDirect(scoops, nonce_count, gensig, &mut deadline, &mut offset);
     return offset;
+}
+
+#[no_mangle]
+pub extern fn shabal256_new() -> *mut Shabal256 {
+    let mut shabal = Shabal256::new();
+    return Box::into_raw(Box::new(shabal));
+}
+
+#[no_mangle]
+pub extern fn shabal256_destroy(shabal: *mut Shabal256) {
+    if !shabal.is_null() {
+        unsafe {
+            // Let it fall out of scope naturally once it is unboxed
+            Box::from_raw(shabal);
+        }
+    }
+}
+
+#[no_mangle]
+pub extern fn shabal256_update(shabal: *mut Shabal256, data: *const u8, data_len: usize) {
+    if !shabal.is_null() {
+        unsafe {
+            let array = slice::from_raw_parts(data, data_len as usize);
+            let mut shabal_borrowed = &mut *shabal;
+            shabal_borrowed.input(array);
+        }
+    }
+}
+
+/// Buffer must have 32 bytes available from the offset
+#[no_mangle]
+pub extern fn shabal256_digest(shabal: *mut Shabal256, buffer: *mut u8, buffer_len: usize, offset: usize) {
+    if !shabal.is_null() {
+        unsafe {
+            let array = slice::from_raw_parts_mut(buffer, buffer_len as usize);
+            let mut shabal_borrowed = &mut *shabal;
+            let result = shabal_borrowed.result_reset();
+            for i in 0..31 {
+                array[offset + i] = result[i];
+            }
+        }
+    }
 }

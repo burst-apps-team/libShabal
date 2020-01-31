@@ -7,7 +7,7 @@ build = "build.rs"
 
 [lib]
 name = "shabal"
-crate-type = ["dylib"]
+crate-type = ["cdylib"]
 
 [features]
 simd = []
@@ -17,6 +17,7 @@ neon = []
 libc = "0.2.66"
 cfg-if = "0.1.10"
 hex = "0.4.0"
+shabal = "0.2.0"
 
 [build-dependencies]
 cc = "1.0.48"
