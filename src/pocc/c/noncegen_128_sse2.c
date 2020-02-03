@@ -9,7 +9,7 @@ sph_shabal_context global_32;
 mshabal128_context global_128;
 mshabal128_context_fast global_128_fast;
 
-void init_shabal_sse2() {
+void init_noncegen_sse2() {
     sph_shabal256_init(&global_32);
     mshabal_init_sse2(&global_128, 256);
     global_128_fast.out_size = global_128.out_size;

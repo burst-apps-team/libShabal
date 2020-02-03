@@ -9,7 +9,7 @@ sph_shabal_context global_32;
 mshabal256_context global_256;
 mshabal256_context_fast global_256_fast;
 
-void init_shabal_avx2() {
+void init_noncegen_avx2() {
     sph_shabal256_init(&global_32);
     mshabal_init_avx2(&global_256, 256);
     global_256_fast.out_size = global_256.out_size;
