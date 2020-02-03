@@ -25,7 +25,8 @@ void init_noncegen_avx() {
 // local_nonces: 	number of nonces to generate
 void noncegen_avx(char *cache, const size_t cache_size, const size_t chunk_offset,
                    const uint64_t numeric_id, const uint64_t local_startnonce,
-                   const uint64_t local_nonces) {
+                   const uint64_t local_nonces,
+                   char poc_version) {
     sph_shabal_context local_32;
     uint64_t nonce;
     size_t len;
@@ -209,9 +210,13 @@ void noncegen_avx(char *cache, const size_t cache_size, const size_t chunk_offse
             for (size_t i = 0; i < NONCE_SIZE; i++) buffer[i] ^= (final[i % HASH_SIZE]);
 
             // Sort them PoC2:
-            for (size_t i = 0; i < HASH_CAP; i++){
-                memmove(&cache[i * cache_size * SCOOP_SIZE + (n + chunk_offset) * SCOOP_SIZE], &buffer[i * SCOOP_SIZE], HASH_SIZE);
-                memmove(&cache[(4095-i) * cache_size * SCOOP_SIZE + (n + chunk_offset) * SCOOP_SIZE + 32], &buffer[i * SCOOP_SIZE + 32], HASH_SIZE);
+            if (poc_version == 2) {
+                for (size_t i = 0; i < HASH_CAP; i++) {
+                    memmove(&cache[i * cache_size * SCOOP_SIZE + (n + chunk_offset) * SCOOP_SIZE],&buffer[i * SCOOP_SIZE], HASH_SIZE);
+                    memmove(&cache[(4095 - i) * cache_size * SCOOP_SIZE + (n + chunk_offset) * SCOOP_SIZE + 32],&buffer[i * SCOOP_SIZE + 32], HASH_SIZE);
+                }
+            } else {
+                memmove(&cache[(n + chunk_offset) * NONCE_SIZE], &buffer[n * NONCE_SIZE], NONCE_SIZE);
             }
             n++;
         }

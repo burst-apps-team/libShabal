@@ -66,6 +66,7 @@ cfg_if! {
                 numeric_ID: u64,
                 local_startnonce: u64,
                 local_nonces: u64,
+                poc_version: u8,
             );
 
             pub fn init_noncegen_avx() -> ();
@@ -76,6 +77,7 @@ cfg_if! {
                 numeric_ID: u64,
                 local_startnonce: u64,
                 local_nonces: u64,
+                poc_version: u8,
             );
 
             pub fn init_noncegen_avx2() -> ();
@@ -86,6 +88,7 @@ cfg_if! {
                 numeric_ID: u64,
                 local_startnonce: u64,
                 local_nonces: u64,
+                poc_version: u8,
             );
 
             pub fn init_noncegen_avx512f() -> ();
@@ -96,6 +99,7 @@ cfg_if! {
                 numeric_ID: u64,
                 local_startnonce: u64,
                 local_nonces: u64,
+                poc_version: u8,
             );
         }
     }
@@ -336,7 +340,6 @@ pub extern fn create_plots(
     #[cfg(feature = "simd")]
     unsafe {
         // TODO don't check on the fly...
-        // TODO poc1/2 switching
         if is_x86_feature_detected!("avx512f") {
             noncegen_avx512(
                 plot_buffer,
@@ -344,7 +347,8 @@ pub extern fn create_plots(
                 0,
                 account_id,
                 start_nonce,
-                nonce_count
+                nonce_count,
+                poc_version,
             );
         } else if is_x86_feature_detected!("avx2") {
             noncegen_avx2(
@@ -353,7 +357,8 @@ pub extern fn create_plots(
                 0,
                 account_id,
                 start_nonce,
-                nonce_count
+                nonce_count,
+                poc_version,
             );
         } else if is_x86_feature_detected!("avx") {
             noncegen_avx(
@@ -362,7 +367,8 @@ pub extern fn create_plots(
                 0,
                 account_id,
                 start_nonce,
-                nonce_count
+                nonce_count,
+                poc_version,
             );
         } else if is_x86_feature_detected!("sse2") {
             noncegen_sse2(
@@ -371,7 +377,8 @@ pub extern fn create_plots(
                 0,
                 account_id,
                 start_nonce,
-                nonce_count
+                nonce_count,
+                poc_version,
             );
         } else {
             pocc::plot::noncegen_rust(
@@ -380,6 +387,7 @@ pub extern fn create_plots(
                 account_id,
                 start_nonce,
                 nonce_count,
+                poc_version,
             );
         }
     }
@@ -391,6 +399,30 @@ pub extern fn create_plots(
             account_id,
             start_nonce,
             nonce_count,
+            poc_version,
+        );
+    }
+}
+
+/// Creates a single PoC Nonce.
+///
+/// `plot_buffer` must be correct size - no size checks are performed.
+#[no_mangle]
+pub extern fn create_plot(
+    account_id: u64,
+    nonce: u64,
+    poc_version: u8,
+    plot_buffer: *mut u8,
+    plot_size: usize,
+) {
+    unsafe {
+        pocc::plot::noncegen_rust(
+            slice::from_raw_parts_mut(plot_buffer, plot_size as usize),
+            0,
+            account_id,
+            nonce,
+            1,
+            poc_version,
         );
     }
 }

@@ -18,6 +18,7 @@ pub fn noncegen_rust(
     numeric_id: u64,
     local_startnonce: u64,
     local_nonces: u64,
+    poc_version: u8,
 ) {
     let numeric_id: [u32; 2] = unsafe { std::mem::transmute(numeric_id.to_be()) };
 
@@ -91,17 +92,21 @@ pub fn noncegen_rust(
         }
 
         // PoC2 shuffle
-        let cache_size = cache.len() / NONCE_SIZE;
-        for i in 0..NUM_SCOOPS {
-            let offset = i * cache_size * SCOOP_SIZE + (n as usize + cache_offset) * SCOOP_SIZE;
-            cache[offset..offset + HASH_SIZE]
-                .clone_from_slice(&buffer[i * SCOOP_SIZE..i * SCOOP_SIZE + HASH_SIZE]);
-            let mirror_offset = (4095 - i) * cache_size * SCOOP_SIZE
-                + (n as usize + cache_offset) * SCOOP_SIZE
-                + HASH_SIZE;
-            cache[mirror_offset..mirror_offset + HASH_SIZE].clone_from_slice(
-                &buffer[i * SCOOP_SIZE + HASH_SIZE..i * SCOOP_SIZE + 2 * HASH_SIZE],
-            );
+        if poc_version == 2 {
+            let cache_size = cache.len() / NONCE_SIZE;
+            for i in 0..NUM_SCOOPS {
+                let offset = i * cache_size * SCOOP_SIZE + (n as usize + cache_offset) * SCOOP_SIZE;
+                cache[offset..offset + HASH_SIZE].clone_from_slice(&buffer[i * SCOOP_SIZE..i * SCOOP_SIZE + HASH_SIZE]);
+                let mirror_offset = (4095 - i) * cache_size * SCOOP_SIZE
+                    + (n as usize + cache_offset) * SCOOP_SIZE
+                    + HASH_SIZE;
+                cache[mirror_offset..mirror_offset + HASH_SIZE].clone_from_slice(
+                    &buffer[i * SCOOP_SIZE + HASH_SIZE..i * SCOOP_SIZE + 2 * HASH_SIZE],
+                );
+            }
+        } else {
+            let offset = (n as usize + cache_offset) * NONCE_SIZE;
+            cache[offset..offset + NONCE_SIZE].clone_from_slice(&buffer);
         }
     }
 }
