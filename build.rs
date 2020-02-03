@@ -27,9 +27,9 @@ fn main() {
     let mut config = shared_config.clone();
 
     config
-        .file("scavenger/src/c/sph_shabal.c")
-        .file("scavenger/src/c/shabal.c")
-        .file("scavenger/src/c/common.c")
+        .file("src/pocc/c/sph_shabal.c")
+        .file("src/pocc/c/shabal.c")
+        .file("src/pocc/c/common.c")
         .compile("shabal");
 
     generate_bindings();
@@ -43,8 +43,8 @@ fn main() {
                 config.flag("-mfpu=neon");
 
                 config
-                    .file("scavenger/src/c/mshabal_128_neon.c")
-                    .file("scavenger/src/c/shabal_neon.c")
+                    .file("src/pocc/c/mshabal_128_neon.c")
+                    .file("src/pocc/c/shabal_neon.c")
                     .compile("shabal_neon");
              }
          }
@@ -59,8 +59,9 @@ fn main() {
                 config.flag("-msse2");
 
                 config
-                    .file("scavenger/src/c/mshabal_128_sse2.c")
-                    .file("scavenger/src/c/shabal_sse2.c")
+                    .file("src/pocc/c/mshabal_128_sse2.c")
+                    .file("src/pocc/c/shabal_sse2.c")
+                    .file("src/pocc/c/noncegen_128_sse2.c")
                     .compile("shabal_sse2");
 
                 let mut config = shared_config.clone();
@@ -72,8 +73,9 @@ fn main() {
                 config.flag("-mavx");
 
                 config
-                    .file("scavenger/src/c/mshabal_128_avx.c")
-                    .file("scavenger/src/c/shabal_avx.c")
+                    .file("src/pocc/c/mshabal_128_avx.c")
+                    .file("src/pocc/c/shabal_avx.c")
+                    .file("src/pocc/c/noncegen_128_avx.c")
                     .compile("shabal_avx");
 
                 let mut config = shared_config.clone();
@@ -85,8 +87,9 @@ fn main() {
                 config.flag("-mavx2");
 
                 config
-                    .file("scavenger/src/c/mshabal_256_avx2.c")
-                    .file("scavenger/src/c/shabal_avx2.c")
+                    .file("src/pocc/c/mshabal_256_avx2.c")
+                    .file("src/pocc/c/shabal_avx2.c")
+                    .file("src/pocc/c/noncegen_256_avx2.c")
                     .compile("shabal_avx2");
 
                 let mut config = shared_config.clone();
@@ -98,8 +101,9 @@ fn main() {
                 config.flag("-mavx512f");
 
                 config
-                    .file("scavenger/src/c/mshabal_512_avx512f.c")
-                    .file("scavenger/src/c/shabal_avx512f.c")
+                    .file("src/pocc/c/mshabal_512_avx512f.c")
+                    .file("src/pocc/c/shabal_avx512f.c")
+                    .file("src/pocc/c/noncegen_512_avx512f.c")
                     .compile("shabal_avx512f");
             }
         }

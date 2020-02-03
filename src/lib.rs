@@ -5,6 +5,9 @@ use std::sync::{Once};
 use std::{u64, slice};
 use shabal::{Shabal256, Digest};
 use std::os::raw::c_void;
+use pocc::plot::NONCE_SIZE;
+
+mod pocc;
 
 extern "C" {
     pub fn find_best_deadline_sph(
@@ -54,6 +57,46 @@ cfg_if! {
                 best_deadline: *mut u64,
                 best_offset: *mut u64,
             ) -> ();
+
+            pub fn init_noncegen_sse2() -> ();
+            pub fn noncegen_sse2(
+                cache: *mut u8,
+                cache_size: usize,
+                chunk_offset: usize,
+                numeric_ID: u64,
+                local_startnonce: u64,
+                local_nonces: u64,
+            );
+
+            pub fn init_noncegen_avx() -> ();
+            pub fn noncegen_avx(
+                cache: *mut u8,
+                cache_size: usize,
+                chunk_offset: usize,
+                numeric_ID: u64,
+                local_startnonce: u64,
+                local_nonces: u64,
+            );
+
+            pub fn init_noncegen_avx2() -> ();
+            pub fn noncegen_avx2(
+                cache: *mut u8,
+                cache_size: usize,
+                chunk_offset: usize,
+                numeric_ID: u64,
+                local_startnonce: u64,
+                local_nonces: u64,
+            );
+
+            pub fn init_noncegen_avx512f() -> ();
+            pub fn noncegen_avx512(
+                cache: *mut u8,
+                cache_size: usize,
+                chunk_offset: usize,
+                numeric_ID: u64,
+                local_startnonce: u64,
+                local_nonces: u64,
+            );
         }
     }
 }
@@ -83,6 +126,7 @@ pub extern fn shabal_findBestDeadlineDirect(
 ) {
     #[cfg(feature = "simd")]
         unsafe {
+        // TODO don't check on the fly...
         if is_x86_feature_detected!("avx512f") {
             find_best_deadline_avx512f(
                 scoops,
@@ -128,9 +172,9 @@ pub extern fn shabal_findBestDeadlineDirect(
     #[cfg(feature = "neon")]
         unsafe {
         #[cfg(target_arch = "arm")]
-        let neon = is_arm_feature_detected!("neon");
+            let neon = is_arm_feature_detected!("neon");
         #[cfg(target_arch = "aarch64")]
-        let neon = true;
+            let neon = true;
         if neon {
             find_best_deadline_neon(
                 scoops,
@@ -169,12 +213,16 @@ pub extern fn shabal_init() {
             unsafe {
             if is_x86_feature_detected!("avx512f") {
                 init_shabal_avx512f();
+                init_noncegen_avx512f();
             } else if is_x86_feature_detected!("avx2") {
                 init_shabal_avx2();
+                init_noncegen_avx2();
             } else if is_x86_feature_detected!("avx") {
                 init_shabal_avx();
+                init_noncegen_avx();
             } else if is_x86_feature_detected!("sse2") {
                 init_shabal_sse2();
+                init_noncegen_sse2();
             }
         }
         #[cfg(feature = "neon")]
@@ -268,5 +316,81 @@ pub extern fn shabal256_digest(shabal: *mut c_void, buffer: *mut u8, offset: usi
             let shabal_borrowed = &mut *(shabal as *mut Shabal256);
             array.copy_from_slice(shabal_borrowed.result_reset().as_slice());
         }
+    }
+}
+
+// TODO steal engraver's fast rust shabal
+
+/// Creates PoC Nonces, with SIMD instructions for extra speed.
+///
+/// `plot_buffer` must be correct size - no size checks are performed.
+#[no_mangle]
+pub extern fn create_plots(
+    account_id: u64,
+    start_nonce: u64,
+    nonce_count: u64,
+    poc_version: u8,
+    plot_buffer: *mut u8,
+    plot_size: usize,
+) {
+    #[cfg(feature = "simd")]
+    unsafe {
+        // TODO don't check on the fly...
+        // TODO poc1/2 switching
+        if is_x86_feature_detected!("avx512f") {
+            noncegen_avx512(
+                plot_buffer,
+                plot_size / NONCE_SIZE,
+                0,
+                account_id,
+                start_nonce,
+                nonce_count
+            );
+        } else if is_x86_feature_detected!("avx2") {
+            noncegen_avx2(
+                plot_buffer,
+                plot_size / NONCE_SIZE,
+                0,
+                account_id,
+                start_nonce,
+                nonce_count
+            );
+        } else if is_x86_feature_detected!("avx") {
+            noncegen_avx(
+                plot_buffer,
+                plot_size / NONCE_SIZE,
+                0,
+                account_id,
+                start_nonce,
+                nonce_count
+            );
+        } else if is_x86_feature_detected!("sse2") {
+            noncegen_sse2(
+                plot_buffer,
+                plot_size / NONCE_SIZE,
+                0,
+                account_id,
+                start_nonce,
+                nonce_count
+            );
+        } else {
+            pocc::plot::noncegen_rust(
+                slice::from_raw_parts_mut(plot_buffer, plot_size as usize),
+                0,
+                account_id,
+                start_nonce,
+                nonce_count,
+            );
+        }
+    }
+    #[cfg(not(feature = "simd"))]
+    unsafe {
+        pocc::plot::noncegen_rust(
+            slice::from_raw_parts_mut(plot_buffer, plot_size as usize),
+            0,
+            account_id,
+            start_nonce,
+            nonce_count,
+        );
     }
 }
