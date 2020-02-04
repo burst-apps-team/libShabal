@@ -7,8 +7,10 @@ use shabal::{Shabal256, Digest};
 use std::os::raw::c_void;
 use pocc::plot::NONCE_SIZE;
 use pocc::plot::SCOOP_SIZE;
+use crate::simd::SimdExtension;
 
 mod pocc;
+mod simd;
 
 extern "C" {
     pub fn find_best_deadline_sph(
@@ -129,84 +131,26 @@ pub extern fn shabal_findBestDeadlineDirect(
     best_deadline: *mut u64,
     best_offset: *mut u64,
 ) {
-    #[cfg(feature = "simd")]
-        unsafe {
-        // TODO don't check on the fly... store type in local var and switch on it
-        if is_x86_feature_detected!("avx512f") {
-            find_best_deadline_avx512f(
-                scoops,
-                nonce_count,
-                gensig,
-                best_deadline,
-                best_offset,
-            );
-        } else if is_x86_feature_detected!("avx2") {
-            find_best_deadline_avx2(
-                scoops,
-                nonce_count,
-                gensig,
-                best_deadline,
-                best_offset,
-            );
-        } else if is_x86_feature_detected!("avx") {
-            find_best_deadline_avx(
-                scoops,
-                nonce_count,
-                gensig,
-                best_deadline,
-                best_offset,
-            );
-        } else if is_x86_feature_detected!("sse2") {
-            find_best_deadline_sse2(
-                scoops,
-                nonce_count,
-                gensig,
-                best_deadline,
-                best_offset,
-            );
-        } else {
-            find_best_deadline_sph(
-                scoops,
-                nonce_count,
-                gensig,
-                best_deadline,
-                best_offset,
-            );
+    let supported_extension: &SimdExtension = &simd::SUPPORTED_SIMD_EXTENSION;
+    unsafe {
+        match supported_extension {
+            simd::SimdExtension::AVX512f => {
+                #[cfg(feature = "simd")] find_best_deadline_avx512f(scoops, nonce_count, gensig, best_deadline, best_offset);
+            },
+            simd::SimdExtension::AVX2 => {
+                #[cfg(feature = "simd")] find_best_deadline_avx2(scoops, nonce_count, gensig, best_deadline, best_offset);
+            },
+            simd::SimdExtension::AVX => {
+                #[cfg(feature = "simd")] find_best_deadline_avx(scoops, nonce_count, gensig, best_deadline, best_offset);
+            },
+            simd::SimdExtension::SSE2 => {
+                #[cfg(feature = "simd")] find_best_deadline_sse2(scoops, nonce_count, gensig, best_deadline, best_offset);
+            },
+            simd::SimdExtension::NEON => {
+                #[cfg(feature = "neon")] find_best_deadline_neon(scoops, nonce_count, gensig, best_deadline, best_offset);
+            },
+            simd::SimdExtension::NONE => find_best_deadline_sph(scoops, nonce_count, gensig, best_deadline, best_offset),
         }
-    }
-    #[cfg(feature = "neon")]
-        unsafe {
-        #[cfg(target_arch = "arm")]
-            let neon = is_arm_feature_detected!("neon");
-        #[cfg(target_arch = "aarch64")]
-            let neon = true;
-        if neon {
-            find_best_deadline_neon(
-                scoops,
-                nonce_count,
-                gensig,
-                best_deadline,
-                best_offset,
-            );
-        } else {
-            find_best_deadline_sph(
-                scoops,
-                nonce_count,
-                gensig,
-                best_deadline,
-                best_offset,
-            );
-        }
-    }
-    #[cfg(not(any(feature = "simd", feature = "neon")))]
-        unsafe {
-        find_best_deadline_sph(
-            scoops,
-            nonce_count,
-            gensig,
-            best_deadline,
-            best_offset,
-        );
     }
 }
 
@@ -214,31 +158,39 @@ pub extern fn shabal_findBestDeadlineDirect(
 pub extern fn shabal_init() {
     static INITIALIZE: Once = Once::new();
     INITIALIZE.call_once(|| {
-        #[cfg(feature = "simd")]
-            unsafe {
-            if is_x86_feature_detected!("avx512f") {
-                init_shabal_avx512f();
-                init_noncegen_avx512f();
-            } else if is_x86_feature_detected!("avx2") {
-                init_shabal_avx2();
-                init_noncegen_avx2();
-            } else if is_x86_feature_detected!("avx") {
-                init_shabal_avx();
-                init_noncegen_avx();
-            } else if is_x86_feature_detected!("sse2") {
-                init_shabal_sse2();
-                init_noncegen_sse2();
-            }
-        }
-        #[cfg(feature = "neon")]
-            unsafe {
-            #[cfg(target_arch = "arm")]
-                let neon = is_arm_feature_detected!("neon");
-            #[cfg(target_arch = "aarch64")]
-                let neon = true;
-
-            if neon {
-                init_shabal_neon();
+        let supported_extension: &SimdExtension = &simd::SUPPORTED_SIMD_EXTENSION;
+        unsafe {
+            match supported_extension {
+                simd::SimdExtension::AVX512f => {
+                    #[cfg(feature = "simd")] {
+                        init_shabal_avx512f();
+                        init_noncegen_avx512f();
+                    }
+                },
+                simd::SimdExtension::AVX2 => {
+                    #[cfg(feature = "simd")] {
+                        init_shabal_avx2();
+                        init_noncegen_avx2();
+                    }
+                },
+                simd::SimdExtension::AVX => {
+                    #[cfg(feature = "simd")] {
+                        init_shabal_avx();
+                        init_noncegen_avx();
+                    }
+                },
+                simd::SimdExtension::SSE2 => {
+                    #[cfg(feature = "simd")] {
+                        init_shabal_sse2();
+                        init_noncegen_sse2();
+                    }
+                },
+                simd::SimdExtension::NEON => {
+                    #[cfg(feature = "neon")] {
+                        init_shabal_neon();
+                    }
+                },
+                _ => {}
             }
         }
     });
@@ -256,7 +208,7 @@ pub extern fn shabal_findBestDeadline(
     return offset;
 }
 
-/// Create a new Shabal256 instance
+/// Create a new Shabal256 instance TODO the rust one is really slow :(
 ///
 /// Returns a pointer to the instance, which
 /// can be used with the other functions to
@@ -324,8 +276,6 @@ pub extern fn shabal256_digest(shabal: *mut c_void, buffer: *mut u8, offset: usi
     }
 }
 
-// TODO steal engraver's fast rust shabal
-
 /// Creates PoC Nonces, with SIMD instructions for extra speed.
 ///
 /// `plot_buffer` must be correct size - no size checks are performed.
@@ -338,70 +288,30 @@ pub extern fn create_plots(
     plot_buffer: *mut u8,
     plot_size: usize,
 ) {
-    #[cfg(feature = "simd")]
+    let supported_extension: &SimdExtension = &simd::SUPPORTED_SIMD_EXTENSION;
     unsafe {
-        // TODO don't check on the fly...
-        if is_x86_feature_detected!("avx512f") {
-            noncegen_avx512(
-                plot_buffer,
-                plot_size / NONCE_SIZE,
-                0,
-                account_id,
-                start_nonce,
-                nonce_count,
-                poc_version,
-            );
-        } else if is_x86_feature_detected!("avx2") {
-            noncegen_avx2(
-                plot_buffer,
-                plot_size / NONCE_SIZE,
-                0,
-                account_id,
-                start_nonce,
-                nonce_count,
-                poc_version,
-            );
-        } else if is_x86_feature_detected!("avx") {
-            noncegen_avx(
-                plot_buffer,
-                plot_size / NONCE_SIZE,
-                0,
-                account_id,
-                start_nonce,
-                nonce_count,
-                poc_version,
-            );
-        } else if is_x86_feature_detected!("sse2") {
-            noncegen_sse2(
-                plot_buffer,
-                plot_size / NONCE_SIZE,
-                0,
-                account_id,
-                start_nonce,
-                nonce_count,
-                poc_version,
-            );
-        } else {
-            pocc::plot::noncegen_rust(
-                slice::from_raw_parts_mut(plot_buffer, plot_size as usize),
-                0,
-                account_id,
-                start_nonce,
-                nonce_count,
-                poc_version,
-            );
+        match supported_extension {
+            simd::SimdExtension::AVX512f => {
+                #[cfg(feature = "simd")]
+                    noncegen_avx512(plot_buffer, plot_size / NONCE_SIZE, 0, account_id, start_nonce, nonce_count, poc_version);
+            },
+            simd::SimdExtension::AVX2 => {
+                #[cfg(feature = "simd")]
+                    noncegen_avx512(plot_buffer, plot_size / NONCE_SIZE, 0, account_id, start_nonce, nonce_count, poc_version);
+            },
+            simd::SimdExtension::AVX => {
+                #[cfg(feature = "simd")]
+                    noncegen_avx512(plot_buffer, plot_size / NONCE_SIZE, 0, account_id, start_nonce, nonce_count, poc_version);
+            },
+            simd::SimdExtension::SSE2 => {
+                #[cfg(feature = "simd")]
+                    noncegen_avx512(plot_buffer, plot_size / NONCE_SIZE, 0, account_id, start_nonce, nonce_count, poc_version);
+            },
+            _ => {
+                let plot_buffer_borrowed = slice::from_raw_parts_mut(plot_buffer, plot_size);
+                pocc::plot::noncegen_rust(plot_buffer_borrowed, 0, account_id, start_nonce, nonce_count, poc_version, );
+            }
         }
-    }
-    #[cfg(not(feature = "simd"))]
-    unsafe {
-        pocc::plot::noncegen_rust(
-            slice::from_raw_parts_mut(plot_buffer, plot_size as usize),
-            0,
-            account_id,
-            start_nonce,
-            nonce_count,
-            poc_version,
-        );
     }
 }
 
