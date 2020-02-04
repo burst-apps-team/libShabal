@@ -413,15 +413,12 @@ pub extern fn create_plot(
     nonce: u64,
     poc_version: u8,
     plot_buffer: *mut u8,
-    plot_size: usize,
 ) {
     unsafe {
-        pocc::plot::noncegen_rust(
-            slice::from_raw_parts_mut(plot_buffer, plot_size as usize),
-            0,
+        pocc::plot::noncegen_single_rust(
+            slice::from_raw_parts_mut(plot_buffer, NONCE_SIZE as usize),
             account_id,
             nonce,
-            1,
             poc_version,
         );
     }
