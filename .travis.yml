@@ -7,8 +7,6 @@ before_deploy:
 matrix:
   include:
     - os: osx
-      before_install:
-        - brew install gcc
     - os: linux
       before_install:
         - sudo add-apt-repository -y ppa:ubuntu-toolchain-r/test
