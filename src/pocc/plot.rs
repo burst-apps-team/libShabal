@@ -3,7 +3,7 @@ use crate::pocc::shabal256_fast::shabal256_fast;
 const HASH_SIZE: usize = 32;
 const HASH_CAP: usize = 4096;
 const NUM_SCOOPS: usize = 4096;
-const SCOOP_SIZE: usize = 64;
+pub const SCOOP_SIZE: usize = 64;
 pub const NONCE_SIZE: usize = (NUM_SCOOPS * SCOOP_SIZE);
 const MESSAGE_SIZE: usize = 16;
 

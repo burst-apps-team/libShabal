@@ -6,6 +6,7 @@ use std::{u64, slice};
 use shabal::{Shabal256, Digest};
 use std::os::raw::c_void;
 use pocc::plot::NONCE_SIZE;
+use pocc::plot::SCOOP_SIZE;
 
 mod pocc;
 
@@ -130,7 +131,7 @@ pub extern fn shabal_findBestDeadlineDirect(
 ) {
     #[cfg(feature = "simd")]
         unsafe {
-        // TODO don't check on the fly...
+        // TODO don't check on the fly... store type in local var and switch on it
         if is_x86_feature_detected!("avx512f") {
             find_best_deadline_avx512f(
                 scoops,
@@ -422,4 +423,27 @@ pub extern fn create_plot(
             poc_version,
         );
     }
+}
+
+/// Creates a single PoC Scoop.
+///
+/// `plot_buffer` must be correct size - no size checks are performed.
+#[no_mangle]
+pub extern fn create_scoop(
+    account_id: u64,
+    nonce: u64,
+    scoop: u32,
+    poc_version: u8,
+    scoop_buffer: *mut u8,
+) {
+    let mut buffer = [0u8; NONCE_SIZE];
+    pocc::plot::noncegen_single_rust(
+        &mut buffer,
+        account_id,
+        nonce,
+        poc_version,
+    );
+    let scoop_buffer_borrowed = unsafe { slice::from_raw_parts_mut(scoop_buffer, SCOOP_SIZE) };
+    let offset = scoop as usize * SCOOP_SIZE;
+    scoop_buffer_borrowed.clone_from_slice(&buffer[offset..offset + SCOOP_SIZE]);
 }
