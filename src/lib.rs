@@ -273,19 +273,19 @@ pub extern fn create_plots(
             simd::SimdExtension::AVX512f => {
                 #[cfg(feature = "simd")]
                     // TODO remove pointless chunk_offset from all of these
-                    noncegen_avx512(offset_plot_buffer, plot_size / NONCE_SIZE, 0, account_id, start_nonce, nonce_count, poc_version);
+                    noncegen_avx512(offset_plot_buffer, nonce_count as usize, 0, account_id, start_nonce, nonce_count, poc_version);
             },
             simd::SimdExtension::AVX2 => {
                 #[cfg(feature = "simd")]
-                    noncegen_avx512(offset_plot_buffer, plot_size / NONCE_SIZE, 0, account_id, start_nonce, nonce_count, poc_version);
+                    noncegen_avx512(offset_plot_buffer, nonce_count as usize, 0, account_id, start_nonce, nonce_count, poc_version);
             },
             simd::SimdExtension::AVX => {
                 #[cfg(feature = "simd")]
-                    noncegen_avx512(offset_plot_buffer, plot_size / NONCE_SIZE, 0, account_id, start_nonce, nonce_count, poc_version);
+                    noncegen_avx512(offset_plot_buffer, nonce_count as usize, 0, account_id, start_nonce, nonce_count, poc_version);
             },
             simd::SimdExtension::SSE2 => {
                 #[cfg(feature = "simd")]
-                    noncegen_avx512(offset_plot_buffer, plot_size / NONCE_SIZE, 0, account_id, start_nonce, nonce_count, poc_version);
+                    noncegen_avx512(offset_plot_buffer, nonce_count as usize, 0, account_id, start_nonce, nonce_count, poc_version);
             },
             _ => {
                 let plot_buffer_borrowed = slice::from_raw_parts_mut(offset_plot_buffer, NONCE_SIZE * nonce_count as usize);
@@ -304,10 +304,12 @@ pub extern fn create_plot(
     nonce: u64,
     poc_version: u8,
     plot_buffer: *mut u8,
+    plot_buffer_offset: usize,
 ) {
     unsafe {
+        let offset_plot_buffer = plot_buffer.add(plot_buffer_offset);
         pocc::plot::noncegen_single_rust(
-            slice::from_raw_parts_mut(plot_buffer, NONCE_SIZE as usize),
+            slice::from_raw_parts_mut(offset_plot_buffer, NONCE_SIZE as usize),
             account_id,
             nonce,
             poc_version,
@@ -325,7 +327,9 @@ pub extern fn create_scoop(
     scoop: u32,
     poc_version: u8,
     scoop_buffer: *mut u8,
+    scoop_buffer_offset: usize,
 ) {
+    let offset_scoop_buffer = unsafe { scoop_buffer.add(scoop_buffer_offset) };
     let mut buffer = [0u8; NONCE_SIZE];
     pocc::plot::noncegen_single_rust(
         &mut buffer,
@@ -333,7 +337,7 @@ pub extern fn create_scoop(
         nonce,
         poc_version,
     );
-    let scoop_buffer_borrowed = unsafe { slice::from_raw_parts_mut(scoop_buffer, SCOOP_SIZE) };
+    let scoop_buffer_borrowed = unsafe { slice::from_raw_parts_mut(offset_scoop_buffer, SCOOP_SIZE) };
     let offset = scoop as usize * SCOOP_SIZE;
     scoop_buffer_borrowed.clone_from_slice(&buffer[offset..offset + SCOOP_SIZE]);
 }
