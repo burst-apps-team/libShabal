@@ -65,7 +65,6 @@ cfg_if! {
             pub fn noncegen_sse2(
                 cache: *mut u8,
                 cache_size: usize,
-                chunk_offset: usize,
                 numeric_ID: u64,
                 local_startnonce: u64,
                 local_nonces: u64,
@@ -76,7 +75,6 @@ cfg_if! {
             pub fn noncegen_avx(
                 cache: *mut u8,
                 cache_size: usize,
-                chunk_offset: usize,
                 numeric_ID: u64,
                 local_startnonce: u64,
                 local_nonces: u64,
@@ -87,7 +85,6 @@ cfg_if! {
             pub fn noncegen_avx2(
                 cache: *mut u8,
                 cache_size: usize,
-                chunk_offset: usize,
                 numeric_ID: u64,
                 local_startnonce: u64,
                 local_nonces: u64,
@@ -98,7 +95,6 @@ cfg_if! {
             pub fn noncegen_avx512(
                 cache: *mut u8,
                 cache_size: usize,
-                chunk_offset: usize,
                 numeric_ID: u64,
                 local_startnonce: u64,
                 local_nonces: u64,
@@ -272,24 +268,23 @@ pub extern fn create_plots(
         match supported_extension {
             simd::SimdExtension::AVX512f => {
                 #[cfg(feature = "simd")]
-                    // TODO remove pointless chunk_offset from all of these
-                    noncegen_avx512(offset_plot_buffer, nonce_count as usize, 0, account_id, start_nonce, nonce_count, poc_version);
+                    noncegen_avx512(offset_plot_buffer, nonce_count as usize, account_id, start_nonce, nonce_count, poc_version);
             },
             simd::SimdExtension::AVX2 => {
                 #[cfg(feature = "simd")]
-                    noncegen_avx512(offset_plot_buffer, nonce_count as usize, 0, account_id, start_nonce, nonce_count, poc_version);
+                    noncegen_avx2(offset_plot_buffer, nonce_count as usize, account_id, start_nonce, nonce_count, poc_version);
             },
             simd::SimdExtension::AVX => {
                 #[cfg(feature = "simd")]
-                    noncegen_avx512(offset_plot_buffer, nonce_count as usize, 0, account_id, start_nonce, nonce_count, poc_version);
+                    noncegen_avx(offset_plot_buffer, nonce_count as usize, account_id, start_nonce, nonce_count, poc_version);
             },
             simd::SimdExtension::SSE2 => {
                 #[cfg(feature = "simd")]
-                    noncegen_avx512(offset_plot_buffer, nonce_count as usize, 0, account_id, start_nonce, nonce_count, poc_version);
+                    noncegen_sse2(offset_plot_buffer, nonce_count as usize, account_id, start_nonce, nonce_count, poc_version);
             },
             _ => {
                 let plot_buffer_borrowed = slice::from_raw_parts_mut(offset_plot_buffer, NONCE_SIZE * nonce_count as usize);
-                pocc::plot::noncegen_rust(plot_buffer_borrowed, 0, account_id, start_nonce, nonce_count, poc_version, );
+                pocc::plot::noncegen_rust(plot_buffer_borrowed, account_id, start_nonce, nonce_count, poc_version, );
             }
         }
     }

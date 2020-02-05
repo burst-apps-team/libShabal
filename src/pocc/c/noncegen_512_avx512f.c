@@ -23,7 +23,7 @@ void init_noncegen_avx512f() {
 // numeric_id:		numeric account id
 // loc_startnonce	nonce to start generation at
 // local_nonces: 	number of nonces to generate
-void noncegen_avx512(char *cache, const size_t cache_size, const size_t chunk_offset,
+void noncegen_avx512(char *cache, const size_t cache_size,
                    const uint64_t numeric_id, const uint64_t local_startnonce,
                    const uint64_t local_nonces,
                    char poc_version) {
@@ -270,7 +270,7 @@ void noncegen_avx512(char *cache, const size_t cache_size, const size_t chunk_of
                     for (int k = 0; k < MSHABAL512_VECTOR_SIZE; k += 1) {
                     memcpy(&cache[((i & 1) * (4095 - (i >> 1)) + ((i + 1) & 1) * (i >> 1)) *
                                       SCOOP_SIZE * cache_size +
-                                  (n + k + chunk_offset) * SCOOP_SIZE + (i & 1) * 32 + j],
+                                  (n + k) * SCOOP_SIZE + (i & 1) * 32 + j],
                            &buffer[(i * 32 + j) * MSHABAL512_VECTOR_SIZE + k * 4], 4);
                     }
                 }
@@ -310,11 +310,11 @@ void noncegen_avx512(char *cache, const size_t cache_size, const size_t chunk_of
             // Sort them PoC2:
             if (poc_version == 2) {
                 for (size_t i = 0; i < HASH_CAP; i++) {
-                    memmove(&cache[i * cache_size * SCOOP_SIZE + (n + chunk_offset) * SCOOP_SIZE],&buffer[i * SCOOP_SIZE], HASH_SIZE);
-                    memmove(&cache[(4095 - i) * cache_size * SCOOP_SIZE + (n + chunk_offset) * SCOOP_SIZE + 32],&buffer[i * SCOOP_SIZE + 32], HASH_SIZE);
+                    memmove(&cache[i * cache_size * SCOOP_SIZE + n * SCOOP_SIZE],&buffer[i * SCOOP_SIZE], HASH_SIZE);
+                    memmove(&cache[(4095 - i) * cache_size * SCOOP_SIZE + n * SCOOP_SIZE + 32],&buffer[i * SCOOP_SIZE + 32], HASH_SIZE);
                 }
             } else {
-                memmove(&cache[(n + chunk_offset) * NONCE_SIZE], &buffer[n * NONCE_SIZE], NONCE_SIZE);
+                memmove(&cache[n * NONCE_SIZE], &buffer[n * NONCE_SIZE], NONCE_SIZE);
             }
             n++;
         }
