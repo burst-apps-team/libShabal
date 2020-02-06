@@ -220,22 +220,6 @@ void noncegen_avx2(char *cache,
                 }
             }
 
-//            // Undo PoC2 shuffle if PoC1 (PoC1 is so rare that this inefficiency is tolerable)
-//            if (poc_version == 1) {
-//                uint8_t* buffer = (uint8_t*)malloc(sizeof(uint8_t) * HASH_SIZE);
-//                for (int i = 0; i < MSHABAL256_VECTOR_SIZE; i++) {
-//                    int rev_pos = NONCE_SIZE - HASH_SIZE;
-//                    for (int pos = 0; pos < NONCE_SIZE / 2; pos += 64) {
-//                        int offset = (n + i) * NONCE_SIZE;
-//                        memmove(buffer, &cache[pos + offset], HASH_SIZE);
-//                        memmove(&cache[pos + offset], &cache[rev_pos + offset], HASH_SIZE);
-//                        memmove(&cache[rev_pos + offset], buffer, HASH_SIZE);
-//                        rev_pos -= 64;
-//                    }
-//                }
-//                free(buffer);
-//            }
-
             n += MSHABAL256_VECTOR_SIZE;
         } else {
             // if less than 8 nonces left, use 1d-shabal
@@ -271,12 +255,12 @@ void noncegen_avx2(char *cache,
             if (poc_version == 2) {
                 for (size_t i = 0; i < NUM_SCOOPS; i++) {
                     // Copy regular hash
-                    memmove(&cache[i * SCOOP_SIZE + n * NONCE_SIZE], &buffer[i * SCOOP_SIZE], HASH_SIZE);
+                    memcpy(&cache[i * SCOOP_SIZE + n * NONCE_SIZE], &buffer[i * SCOOP_SIZE], HASH_SIZE);
                     // Copy shuffled hash
-                    memmove(&cache[(4095 - i) * SCOOP_SIZE + n * NONCE_SIZE + 32], &buffer[i * SCOOP_SIZE + 32], HASH_SIZE);
+                    memcpy(&cache[(4095 - i) * SCOOP_SIZE + n * NONCE_SIZE + 32], &buffer[i * SCOOP_SIZE + 32], HASH_SIZE);
                 }
             } else {
-                memmove(&cache[n * NONCE_SIZE], buffer, NONCE_SIZE);
+                memcpy(&cache[n * NONCE_SIZE], buffer, NONCE_SIZE);
             }
             n++;
         }

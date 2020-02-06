@@ -3,7 +3,7 @@
 
 void write_seed(char seed[32], uint64_t numeric_id) {
     numeric_id = bswap_64(numeric_id);
-    memmove(&seed[0], &numeric_id, 8);
+    memcpy(&seed[0], &numeric_id, 8);
     memset(&seed[8], 0, 8);
     seed[16] = -128;  // shabal message termination bit
     memset(&seed[17], 0, 15);

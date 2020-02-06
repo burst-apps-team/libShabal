@@ -220,11 +220,11 @@ void noncegen_sse2(char *cache,
             // Sort them PoC2:
             if (poc_version == 2) {
                 for (size_t i = 0; i < NUM_SCOOPS; i++) {
-                    memmove(&cache[i * SCOOP_SIZE + n * NONCE_SIZE], &buffer[i * SCOOP_SIZE], HASH_SIZE);
-                    memmove(&cache[(4095 - i) * SCOOP_SIZE + n * NONCE_SIZE + 32], &buffer[i * SCOOP_SIZE + 32], HASH_SIZE);
+                    memcpy(&cache[i * SCOOP_SIZE + n * NONCE_SIZE], &buffer[i * SCOOP_SIZE], HASH_SIZE);
+                    memcpy(&cache[(4095 - i) * SCOOP_SIZE + n * NONCE_SIZE + 32], &buffer[i * SCOOP_SIZE + 32], HASH_SIZE);
                 }
             } else {
-                memmove(&cache[n * NONCE_SIZE], buffer, NONCE_SIZE);
+                memcpy(&cache[n * NONCE_SIZE], buffer, NONCE_SIZE);
             }
             n++;
         }
