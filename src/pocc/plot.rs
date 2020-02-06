@@ -11,7 +11,7 @@ const MESSAGE_SIZE: usize = 16;
 // local_num:		thread number
 // numeric_id:		numeric account id
 // loc_startnonce	nonce to start generation at
-// local_nonces: 	number of nonces to generate
+// local_nonces: 	number of nonces to generate (count from 0)
 pub fn noncegen_rust(
     cache: &mut [u8],
     numeric_id: u64,
@@ -21,6 +21,7 @@ pub fn noncegen_rust(
 ) {
     let numeric_id: [u32; 2] = unsafe { std::mem::transmute(numeric_id.to_be()) };
 
+    // TODO hash straight into provided buffer
     let mut buffer = [0u8; NONCE_SIZE];
     let mut final_buffer = [0u8; HASH_SIZE];
 
@@ -92,19 +93,24 @@ pub fn noncegen_rust(
 
         // PoC2 shuffle
         if poc_version == 2 {
-            let cache_size = cache.len() / NONCE_SIZE;
-            for i in 0..NUM_SCOOPS {
-                let offset = i * cache_size * SCOOP_SIZE + n as usize * SCOOP_SIZE;
-                cache[offset..offset + HASH_SIZE].clone_from_slice(&buffer[i * SCOOP_SIZE..i * SCOOP_SIZE + HASH_SIZE]);
-                let mirror_offset = (4095 - i) * cache_size * SCOOP_SIZE + n as usize * SCOOP_SIZE + HASH_SIZE;
-                cache[mirror_offset..mirror_offset + HASH_SIZE].clone_from_slice(
-                    &buffer[i * SCOOP_SIZE + HASH_SIZE..i * SCOOP_SIZE + 2 * HASH_SIZE],
-                );
+            // TODO lots of copies here. Optimize this.
+            let mut hash_buffer = [0u8; HASH_SIZE];
+            let mut hash_buffer2 = [0u8; HASH_SIZE];
+            let mut rev_pos = NONCE_SIZE - HASH_SIZE;
+            for i in (32..NONCE_SIZE/2).step_by(64) {
+                // TODO this is jank thanks to the borrow checker..
+                {
+                    hash_buffer.clone_from_slice(&buffer[i..i + HASH_SIZE]);
+                    hash_buffer2.clone_from_slice(&buffer[rev_pos..rev_pos + HASH_SIZE]);
+                }
+                buffer[i..i + HASH_SIZE].clone_from_slice(&hash_buffer2);
+                buffer[rev_pos..rev_pos + HASH_SIZE].clone_from_slice(&hash_buffer);
+                rev_pos -= 64;
             }
-        } else {
-            let offset = n as usize * NONCE_SIZE;
-            cache[offset..offset + NONCE_SIZE].clone_from_slice(&buffer);
         }
+
+        let offset = n as usize * NONCE_SIZE;
+        cache[offset..offset + NONCE_SIZE].clone_from_slice(&buffer);
     }
 }
 
