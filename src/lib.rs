@@ -200,7 +200,7 @@ pub extern fn shabal_findBestDeadline(
     return offset;
 }
 
-/// Create a new Shabal256 instance TODO the rust one is really slow :(
+/// Create a new Shabal256 instance
 ///
 /// Returns a pointer to the instance, which
 /// can be used with the other functions to

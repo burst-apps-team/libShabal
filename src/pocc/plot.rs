@@ -1,4 +1,5 @@
 use crate::pocc::shabal256_fast::shabal256_fast;
+use std::ptr::copy_nonoverlapping;
 
 const HASH_SIZE: usize = 32;
 const HASH_CAP: usize = 4096;
@@ -21,8 +22,6 @@ pub fn noncegen_rust(
 ) {
     let numeric_id: [u32; 2] = unsafe { std::mem::transmute(numeric_id.to_be()) };
 
-    // TODO hash straight into provided buffer
-    let mut buffer = [0u8; NONCE_SIZE];
     let mut final_buffer = [0u8; HASH_SIZE];
 
     // prepare termination strings
@@ -37,7 +36,12 @@ pub fn noncegen_rust(
     let mut t3 = [0u32; MESSAGE_SIZE];
     t3[0] = 0x80;
 
+    let mut hash_buffer = [0u8; HASH_SIZE];
+
     for n in 0..local_nonces {
+        let offset = n as usize * NONCE_SIZE;
+        let buffer = &mut cache[offset..offset + NONCE_SIZE];
+
         // generate nonce numbers & change endianness
         let nonce: [u32; 2] = unsafe { std::mem::transmute((local_startnonce + n).to_be()) };
 
@@ -60,22 +64,19 @@ pub fn noncegen_rust(
         // store first hash into smart termination string 2
         t2[0..8].clone_from_slice(&hash);
         // round 2 - 128
-        for i in (NONCE_SIZE - HASH_CAP + HASH_SIZE..=NONCE_SIZE - HASH_SIZE)
-            .rev()
-            .step_by(HASH_SIZE)
-            {
-                // check if msg can be divided into 512bit packages without a
-                // remainder
-                if i % 64 == 0 {
-                    // last msg = seed + termination
-                    let hash = &shabal256_fast(&buffer[i..NONCE_SIZE], &t1);
-                    buffer[i - HASH_SIZE..i].clone_from_slice(hash);
-                } else {
-                    // last msg = 256 bit data + seed + termination
-                    let hash = &shabal256_fast(&buffer[i..NONCE_SIZE], &t2);
-                    buffer[i - HASH_SIZE..i].clone_from_slice(hash);
-                }
+        for i in (NONCE_SIZE - HASH_CAP + HASH_SIZE..=NONCE_SIZE - HASH_SIZE).rev().step_by(HASH_SIZE) {
+            // check if msg can be divided into 512bit packages without a
+            // remainder
+            if i % 64 == 0 {
+                // last msg = seed + termination
+                let hash = &shabal256_fast(&buffer[i..NONCE_SIZE], &t1);
+                buffer[i - HASH_SIZE..i].clone_from_slice(hash);
+            } else {
+                // last msg = 256 bit data + seed + termination
+                let hash = &shabal256_fast(&buffer[i..NONCE_SIZE], &t2);
+                buffer[i - HASH_SIZE..i].clone_from_slice(hash);
             }
+        }
 
         // round 128-8192
         for i in (HASH_SIZE..=NONCE_SIZE - HASH_CAP).rev().step_by(HASH_SIZE) {
@@ -93,24 +94,19 @@ pub fn noncegen_rust(
 
         // PoC2 shuffle
         if poc_version == 2 {
-            // TODO lots of copies here. Optimize this.
-            let mut hash_buffer = [0u8; HASH_SIZE];
-            let mut hash_buffer2 = [0u8; HASH_SIZE];
-            let mut rev_pos = NONCE_SIZE - HASH_SIZE;
-            for i in (32..NONCE_SIZE/2).step_by(64) {
-                // TODO this is jank thanks to the borrow checker..
-                {
-                    hash_buffer.clone_from_slice(&buffer[i..i + HASH_SIZE]);
-                    hash_buffer2.clone_from_slice(&buffer[rev_pos..rev_pos + HASH_SIZE]);
+            unsafe {
+                let mut rev_pos = NONCE_SIZE - HASH_SIZE;
+                for pos in (32..NONCE_SIZE / 2).step_by(64) {
+                    let hash_buffer_ptr = hash_buffer.as_mut_ptr();
+                    let buffer_pos = buffer.as_mut_ptr().add(pos);
+                    let buffer_rev_pos = buffer.as_mut_ptr().add(rev_pos);
+                    copy_nonoverlapping(buffer_pos, hash_buffer_ptr, HASH_SIZE);
+                    copy_nonoverlapping(buffer_rev_pos, buffer_pos, HASH_SIZE);
+                    copy_nonoverlapping(hash_buffer_ptr, buffer_rev_pos, HASH_SIZE);
+                    rev_pos -= 64;
                 }
-                buffer[i..i + HASH_SIZE].clone_from_slice(&hash_buffer2);
-                buffer[rev_pos..rev_pos + HASH_SIZE].clone_from_slice(&hash_buffer);
-                rev_pos -= 64;
             }
         }
-
-        let offset = n as usize * NONCE_SIZE;
-        cache[offset..offset + NONCE_SIZE].clone_from_slice(&buffer);
     }
 }
 
@@ -191,18 +187,18 @@ pub fn noncegen_single_rust(
 
     // PoC2 shuffle
     if poc_version == 2 {
-        let mut hash_buffer = [0u8; HASH_SIZE];
-        let mut hash_buffer2 = [0u8; HASH_SIZE];
-        let mut rev_pos = NONCE_SIZE - HASH_SIZE;
-        for i in (32..NONCE_SIZE/2).step_by(64) {
-            // TODO this is jank thanks to the borrow checker..
-            {
-                hash_buffer.clone_from_slice(&cache[i..i + HASH_SIZE]);
-                hash_buffer2.clone_from_slice(&cache[rev_pos..rev_pos + HASH_SIZE]);
+        unsafe {
+            let mut hash_buffer = [0u8; HASH_SIZE];
+            let mut rev_pos = NONCE_SIZE - HASH_SIZE;
+            for pos in (32..NONCE_SIZE / 2).step_by(64) {
+                let hash_buffer_ptr = hash_buffer.as_mut_ptr();
+                let cache_pos = cache.as_mut_ptr().add(pos);
+                let cache_rev_pos = cache.as_mut_ptr().add(rev_pos);
+                copy_nonoverlapping(cache_pos, hash_buffer_ptr, HASH_SIZE);
+                copy_nonoverlapping(cache_rev_pos, cache_pos, HASH_SIZE);
+                copy_nonoverlapping(hash_buffer_ptr, cache_rev_pos, HASH_SIZE);
+                rev_pos -= 64;
             }
-            cache[i..i + HASH_SIZE].clone_from_slice(&hash_buffer2);
-            cache[rev_pos..rev_pos + HASH_SIZE].clone_from_slice(&hash_buffer);
-            rev_pos -= 64;
         }
     }
 }
