@@ -211,12 +211,12 @@ void noncegen_sse2(char *cache, const size_t cache_size,
 
             // Sort them PoC2:
             if (poc_version == 2) {
-                for (size_t i = 0; i < HASH_CAP; i++) {
-                    memmove(&cache[i * cache_size * SCOOP_SIZE + n * SCOOP_SIZE],&buffer[i * SCOOP_SIZE], HASH_SIZE);
-                    memmove(&cache[(4095 - i) * cache_size * SCOOP_SIZE + n * SCOOP_SIZE + 32],&buffer[i * SCOOP_SIZE + 32], HASH_SIZE);
+                for (size_t i = 0; i < NUM_SCOOPS; i++) {
+                    memmove(&cache[i * cache_size * SCOOP_SIZE + n * SCOOP_SIZE], &buffer[i * SCOOP_SIZE], HASH_SIZE);
+                    memmove(&cache[(4095 - i) * cache_size * SCOOP_SIZE + n * SCOOP_SIZE + 32], &buffer[i * SCOOP_SIZE + 32], HASH_SIZE);
                 }
             } else {
-                memmove(&cache[n * NONCE_SIZE], &buffer[n * NONCE_SIZE], NONCE_SIZE);
+                memmove(&cache[n * NONCE_SIZE], buffer, NONCE_SIZE);
             }
             n++;
         }

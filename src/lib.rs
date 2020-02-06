@@ -265,30 +265,30 @@ pub extern fn create_plots(
     plot_buffer_offset: usize,
 ) {
     if nonce_count == 0 { return; }
-    let nonce_count_filtered = nonce_count;
     let supported_extension: &SimdExtension = &simd::SUPPORTED_SIMD_EXTENSION;
     unsafe {
         let offset_plot_buffer = plot_buffer.add(plot_buffer_offset);
+        println!("Starting bulk plot, offset: {}, offset plot buffer: {}", plot_buffer_offset, offset_plot_buffer as usize);
         match supported_extension {
             simd::SimdExtension::AVX512f => {
                 #[cfg(feature = "simd")]
-                    noncegen_avx512(offset_plot_buffer, nonce_count as usize, account_id, start_nonce, nonce_count_filtered, poc_version);
+                    noncegen_avx512(offset_plot_buffer, nonce_count as usize, account_id, start_nonce, nonce_count, poc_version);
             },
             simd::SimdExtension::AVX2 => {
                 #[cfg(feature = "simd")]
-                    noncegen_avx2(offset_plot_buffer, nonce_count as usize, account_id, start_nonce, nonce_count_filtered, poc_version);
+                    noncegen_avx2(offset_plot_buffer, nonce_count as usize, account_id, start_nonce, nonce_count, poc_version);
             },
             simd::SimdExtension::AVX => {
                 #[cfg(feature = "simd")]
-                    noncegen_avx(offset_plot_buffer, nonce_count as usize, account_id, start_nonce, nonce_count_filtered, poc_version);
+                    noncegen_avx(offset_plot_buffer, nonce_count as usize, account_id, start_nonce, nonce_count, poc_version);
             },
             simd::SimdExtension::SSE2 => {
                 #[cfg(feature = "simd")]
-                    noncegen_sse2(offset_plot_buffer, nonce_count as usize, account_id, start_nonce, nonce_count_filtered, poc_version);
+                    noncegen_sse2(offset_plot_buffer, nonce_count as usize, account_id, start_nonce, nonce_count, poc_version);
             },
             _ => {
                 let plot_buffer_borrowed = slice::from_raw_parts_mut(offset_plot_buffer, NONCE_SIZE * nonce_count as usize);
-                pocc::plot::noncegen_rust(plot_buffer_borrowed, account_id, start_nonce, nonce_count_filtered, poc_version, );
+                pocc::plot::noncegen_rust(plot_buffer_borrowed, account_id, start_nonce, nonce_count, poc_version, );
             }
         }
     }

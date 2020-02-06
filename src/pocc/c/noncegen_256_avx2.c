@@ -4,6 +4,7 @@
 #include "common.h"
 #include "mshabal_256_avx2.h"
 #include "sph_shabal.h"
+#include <stdio.h>
 
 sph_shabal_context global_32;
 mshabal256_context global_256;
@@ -23,7 +24,7 @@ void init_noncegen_avx2() {
 // numeric_id:		numeric account id
 // loc_startnonce	nonce to start generation at
 // local_nonces: 	number of nonces to generate
-void noncegen_avx2(char *cache, const size_t cache_size,
+void noncegen_avx2(char *cache, const size_t cache_size_dontuse,
                    const uint64_t numeric_id, const uint64_t local_startnonce,
                    const uint64_t local_nonces,
                    char poc_version) {
@@ -198,13 +199,14 @@ void noncegen_avx2(char *cache, const size_t cache_size,
                     _mm256_xor_si256(_mm256_loadu_si256((__m256i *)buffer + j), F[j % 8]));
              
             // todo: fork SIMD aligned plot file here
-            
+
+            // TODO poc version check here...
             // simd shabal words unpack + POC Shuffle + scatter nonces into optimised cache
             for (int i = 0; i < NUM_SCOOPS * 2; i++) {
                 for (int j = 0; j < 32; j += 4) {
                     for (int k = 0; k < MSHABAL256_VECTOR_SIZE; k += 1) {
                     memcpy(&cache[((i & 1) * (4095 - (i >> 1)) + ((i + 1) & 1) * (i >> 1)) *
-                                      SCOOP_SIZE * cache_size +
+                                  SCOOP_SIZE * 1 /* fixme cache_size */ +
                                   (n + k) * SCOOP_SIZE + (i & 1) * 32 + j],
                            &buffer[(i * 32 + j) * MSHABAL256_VECTOR_SIZE + k * 4], 4);
                     }
@@ -244,13 +246,16 @@ void noncegen_avx2(char *cache, const size_t cache_size,
 
             // Sort them PoC2:
             if (poc_version == 2) {
-                for (size_t i = 0; i < HASH_CAP; i++) {
-                    memmove(&cache[i * cache_size * SCOOP_SIZE + n * SCOOP_SIZE],&buffer[i * SCOOP_SIZE], HASH_SIZE);
-                    memmove(&cache[(4095 - i) * cache_size * SCOOP_SIZE + n * SCOOP_SIZE + 32],&buffer[i * SCOOP_SIZE + 32], HASH_SIZE);
+                printf("PoC2 shuffle for nonce %d\n", n);
+                for (size_t i = 0; i < NUM_SCOOPS; i++) {
+                    memmove(&cache[i * SCOOP_SIZE + n * NONCE_SIZE], &buffer[i * SCOOP_SIZE], HASH_SIZE);
+                    memmove(&cache[(4095 - i) * SCOOP_SIZE + n * NONCE_SIZE + 32], &buffer[i * SCOOP_SIZE + 32], HASH_SIZE);
                 }
             } else {
-                memmove(&cache[n * NONCE_SIZE], &buffer[n * NONCE_SIZE], NONCE_SIZE);
+                printf("PoC1 copy for nonce %d\n", n);
+                memmove(&cache[n * NONCE_SIZE], buffer, NONCE_SIZE);
             }
+            printf("Nonce %d done!\n", n);
             n++;
         }
     }
