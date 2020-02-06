@@ -7,6 +7,8 @@ use std::os::raw::c_void;
 use pocc::plot::NONCE_SIZE;
 use pocc::plot::SCOOP_SIZE;
 use crate::simd::SimdExtension;
+use std::ffi::CString;
+use once_cell::sync::Lazy;
 
 mod pocc;
 mod simd;
@@ -113,6 +115,15 @@ cfg_if! {
             ) -> ();
         }
     }
+}
+
+static VERSION: Lazy<CString> = Lazy::new(|| {
+    return CString::new("v1.3.0").expect("Failed to create version string");
+});
+
+#[no_mangle]
+pub extern fn libshabal_version() -> *const u8 {
+    return VERSION.as_ptr() as *const u8;
 }
 
 #[no_mangle]
