@@ -23,7 +23,7 @@ void init_noncegen_avx() {
 // numeric_id:		numeric account id
 // loc_startnonce	nonce to start generation at
 // local_nonces: 	number of nonces to generate
-void noncegen_avx(char *cache, const size_t cache_size_dontuse,
+void noncegen_avx(char *cache,
                    const uint64_t numeric_id, const uint64_t local_startnonce,
                    const uint64_t local_nonces,
                    char poc_version) {
@@ -165,20 +165,28 @@ void noncegen_avx(char *cache, const size_t cache_size_dontuse,
                     _mm_xor_si128(_mm_loadu_si128((__m128i *)buffer + j), F[j % 8]));
 
             // todo: fork SIMD aligned plot file here
-            // simd shabal words unpack + POC Shuffle + scatter nonces into optimised cache
-
-            for (int i = 0; i < NUM_SCOOPS * 2; i++) {
-                for (int j = 0; j < 32; j += 4) {
-                    for (int k = 0; k < MSHABAL128_VECTOR_SIZE; k += 1) {
-                    memcpy(&cache[((i & 1) * (4095 - (i >> 1)) + ((i + 1) & 1) * (i >> 1)) *
-                                      SCOOP_SIZE * 1 /* fixme cache_size */ +
-                                  (n + k) * SCOOP_SIZE + (i & 1) * 32 + j],
-                           &buffer[(i * 32 + j) * MSHABAL128_VECTOR_SIZE + k * 4], 4);
+            // simd shabal words unpack + PoC2 Shuffle + scatter nonces into optimised cache
+            if (poc_version == 2) {
+                for (int i = 0; i < NUM_SCOOPS * 2; i++) {
+                    for (int j = 0; j < 32; j += 4) {
+                        for (int k = 0; k < MSHABAL128_VECTOR_SIZE; k++) {
+                            memcpy(&cache[((i & 1) * (4095 - (i >> 1)) + ((i + 1) & 1) * (i >> 1)) * SCOOP_SIZE + (n + k) * NONCE_SIZE + (i & 1) * 32 + j],
+                                   &buffer[(i * 32 + j) * MSHABAL128_VECTOR_SIZE + k * 4], 4);
+                        }
+                    }
+                }
+            } else {
+                for (int i = 0; i < NUM_SCOOPS * 2; i++) {
+                    for (int j = 0; j < 32; j += 4) {
+                        for (int k = 0; k < MSHABAL128_VECTOR_SIZE; k++) {
+                            memcpy(&cache[((i & 1) * (i >> 1) + ((i + 1) & 1) * (i >> 1)) * SCOOP_SIZE + (n + k) * NONCE_SIZE + (i & 1) * 32 + j],
+                                   &buffer[(i * 32 + j) * MSHABAL128_VECTOR_SIZE + k * 4], 4);
+                        }
                     }
                 }
             }
 
-            n += 4;
+            n += MSHABAL128_VECTOR_SIZE;
         } else {
             // if less than 8 nonces left, use 1d-shabal
             int8_t *xv = (int8_t *)&numeric_id;
@@ -212,8 +220,8 @@ void noncegen_avx(char *cache, const size_t cache_size_dontuse,
             // Sort them PoC2:
             if (poc_version == 2) {
                 for (size_t i = 0; i < NUM_SCOOPS; i++) {
-                    memmove(&cache[i * SCOOP_SIZE + n * SCOOP_SIZE], &buffer[i * SCOOP_SIZE], HASH_SIZE);
-                    memmove(&cache[(4095 - i) * SCOOP_SIZE + n * SCOOP_SIZE + 32], &buffer[i * SCOOP_SIZE + 32], HASH_SIZE);
+                    memmove(&cache[i * SCOOP_SIZE + n * NONCE_SIZE], &buffer[i * SCOOP_SIZE], HASH_SIZE);
+                    memmove(&cache[(4095 - i) * SCOOP_SIZE + n * NONCE_SIZE + 32], &buffer[i * SCOOP_SIZE + 32], HASH_SIZE);
                 }
             } else {
                 memmove(&cache[n * NONCE_SIZE], buffer, NONCE_SIZE);
