@@ -275,7 +275,6 @@ pub extern fn create_plots(
     let supported_extension: &SimdExtension = &simd::SUPPORTED_SIMD_EXTENSION;
     unsafe {
         let offset_plot_buffer = plot_buffer.add(plot_buffer_offset);
-        println!("Starting bulk plot, offset: {}, offset plot buffer: {}", plot_buffer_offset, offset_plot_buffer as usize);
         match supported_extension {
             simd::SimdExtension::AVX512f => {
                 #[cfg(feature = "simd")]
