@@ -361,7 +361,7 @@ pub extern fn curve25519_get_public_key(private_key: *const u8, public_key_buffe
 #[no_mangle]
 pub extern fn curve25519_get_shared_secret(private_key: *const u8, public_key: *const u8, shared_secret_buffer: *mut u8) {
     unsafe {
-        let private_key_borrowed = slice::from_raw_parts(private_key, 32);
+        let private_key_borrowed = slice::from_raw_parts_mut(private_key, 32);
         let public_key_borrowed = slice::from_raw_parts(public_key, 32);
         let shared_secret_buffer_borrowed = slice::from_raw_parts_mut(shared_secret_buffer, 32);
         curve_api::get_shared_secret(private_key_borrowed, public_key_borrowed, shared_secret_buffer_borrowed)
