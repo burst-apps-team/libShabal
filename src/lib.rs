@@ -12,7 +12,8 @@ use once_cell::sync::Lazy;
 
 mod pocc;
 mod simd;
-mod c_shabal;
+mod shabal;
+mod curve25519;
 
 extern "C" {
     pub fn find_best_deadline_sph(
@@ -218,7 +219,7 @@ pub extern fn shabal_findBestDeadline(
 /// manipulate the instance.
 #[no_mangle]
 pub extern fn shabal256_new() -> *mut c_void {
-    return c_shabal::shabal256_new()
+    return shabal::shabal256_new()
 }
 
 /// Destroy a Shabal256 instance, clearing memory allocated for it.
@@ -226,7 +227,7 @@ pub extern fn shabal256_new() -> *mut c_void {
 /// `shabal` is the pointer to the instance returned from `shabal256_new()`
 #[no_mangle]
 pub extern fn shabal256_destroy(shabal: *mut c_void) {
-    c_shabal::shabal256_destroy(shabal)
+    shabal::shabal256_destroy(shabal)
 }
 
 /// Reset a Shabal256 instance to its initial state
@@ -234,7 +235,7 @@ pub extern fn shabal256_destroy(shabal: *mut c_void) {
 /// `shabal` is the pointer to the instance returned from `shabal256_new()`
 #[no_mangle]
 pub extern fn shabal256_reset(shabal: *mut c_void) {
-    c_shabal::shabal256_reset(shabal);
+    shabal::shabal256_reset(shabal);
 }
 
 /// Update a Shabal256 instance with new input data
@@ -244,7 +245,7 @@ pub extern fn shabal256_reset(shabal: *mut c_void) {
 /// Inputs data into the digest from `data` starting at `offset` of length `len`
 #[no_mangle]
 pub extern fn shabal256_update(shabal: *mut c_void, data: *const u8, offset: usize, len: usize) {
-    c_shabal::shabal256_update(shabal, data, offset, len);
+    shabal::shabal256_update(shabal, data, offset, len);
 }
 
 /// Retrieve the result of a Shabal256 digest and reset the digest.
@@ -254,7 +255,7 @@ pub extern fn shabal256_update(shabal: *mut c_void, data: *const u8, offset: usi
 /// `buffer` must have 32 bytes available from `offset` otherwise this will attempt to write beyond the array.
 #[no_mangle]
 pub extern fn shabal256_digest(shabal: *mut c_void, buffer: *mut u8, offset: usize) {
-    c_shabal::shabal256_digest(shabal, buffer, offset);
+    shabal::shabal256_digest(shabal, buffer, offset);
 }
 
 /// Creates PoC Nonces, with SIMD instructions for extra speed.
@@ -345,4 +346,45 @@ pub extern fn create_scoop(
     let scoop_buffer_borrowed = unsafe { slice::from_raw_parts_mut(offset_scoop_buffer, SCOOP_SIZE) };
     let offset = scoop as usize * SCOOP_SIZE;
     scoop_buffer_borrowed.clone_from_slice(&buffer[offset..offset + SCOOP_SIZE]);
+}
+
+#[no_mangle]
+pub extern fn curve25519_get_public_key(private_key: *const u8, public_key_buffer: *mut u8) {
+    unsafe {
+        let private_key_borrowed = slice::from_raw_parts(private_key, 32);
+        let public_key_buffer_borrowed = slice::from_raw_parts_mut(public_key_buffer, 32);
+        curve25519::get_public_key(private_key_borrowed, public_key_buffer_borrowed)
+    }
+}
+
+#[no_mangle]
+pub extern fn curve25519_get_shared_secret(private_key: *const u8, public_key: *const u8, shared_secret_buffer: *mut u8) {
+    unsafe {
+        let private_key_borrowed = slice::from_raw_parts(private_key, 32);
+        let public_key_borrowed = slice::from_raw_parts(public_key, 32);
+        let shared_secret_buffer_borrowed = slice::from_raw_parts_mut(shared_secret_buffer, 32);
+        curve25519::get_shared_secret(private_key_borrowed, public_key_borrowed,shared_secret_buffer_borrowed)
+    }
+}
+
+#[no_mangle]
+pub extern fn curve25519_sign(private_key: *const u8, message_sha256: *const u8, signature_buffer: *mut u8) {
+    unsafe {
+        let private_key_borrowed = slice::from_raw_parts(private_key, 32);
+        let message_sha256_borrowed = slice::from_raw_parts(message_sha256, 32);
+        let signature_buffer_borrowed = slice::from_raw_parts_mut(signature_buffer, 64);
+        curve25519::sign(private_key_borrowed, message_sha256_borrowed,signature_buffer_borrowed)
+    }
+}
+
+/// `enforce_canonical` and the return value are u8 bools where 0 represents false and 1 represents true.
+/// So, a return value of 1 indicates successful verification and a return value of 0 indicates unsuccessful verification.
+#[no_mangle]
+pub extern fn curve25519_verify(public_key: *const u8, signature: *const u8, message_sha256: *const u8, enforce_canonical: u8) -> u8 {
+    unsafe {
+        let public_key_borrowed = slice::from_raw_parts(public_key, 32);
+        let signature_borrowed = slice::from_raw_parts(signature, 64);
+        let message_sha256_borrowed = slice::from_raw_parts(message_sha256, 32);
+        return if curve25519::verify(public_key_borrowed, signature_borrowed,message_sha256_borrowed, enforce_canonical != 0) { 1 } else { 0 };
+    }
 }
