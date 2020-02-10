@@ -13,6 +13,7 @@ use once_cell::sync::Lazy;
 mod pocc;
 mod simd;
 mod shabal;
+mod curve_api;
 mod curve25519;
 
 extern "C" {
@@ -353,7 +354,7 @@ pub extern fn curve25519_get_public_key(private_key: *const u8, public_key_buffe
     unsafe {
         let private_key_borrowed = slice::from_raw_parts(private_key, 32);
         let public_key_buffer_borrowed = slice::from_raw_parts_mut(public_key_buffer, 32);
-        curve25519::get_public_key(private_key_borrowed, public_key_buffer_borrowed)
+        curve_api::get_public_key(private_key_borrowed, public_key_buffer_borrowed)
     }
 }
 
@@ -363,7 +364,7 @@ pub extern fn curve25519_get_shared_secret(private_key: *const u8, public_key: *
         let private_key_borrowed = slice::from_raw_parts(private_key, 32);
         let public_key_borrowed = slice::from_raw_parts(public_key, 32);
         let shared_secret_buffer_borrowed = slice::from_raw_parts_mut(shared_secret_buffer, 32);
-        curve25519::get_shared_secret(private_key_borrowed, public_key_borrowed,shared_secret_buffer_borrowed)
+        curve_api::get_shared_secret(private_key_borrowed, public_key_borrowed, shared_secret_buffer_borrowed)
     }
 }
 
@@ -373,7 +374,7 @@ pub extern fn curve25519_sign(private_key: *const u8, message_sha256: *const u8,
         let private_key_borrowed = slice::from_raw_parts(private_key, 32);
         let message_sha256_borrowed = slice::from_raw_parts(message_sha256, 32);
         let signature_buffer_borrowed = slice::from_raw_parts_mut(signature_buffer, 64);
-        curve25519::sign(private_key_borrowed, message_sha256_borrowed,signature_buffer_borrowed)
+        curve_api::sign(private_key_borrowed, message_sha256_borrowed, signature_buffer_borrowed)
     }
 }
 
@@ -385,6 +386,6 @@ pub extern fn curve25519_verify(public_key: *const u8, signature: *const u8, mes
         let public_key_borrowed = slice::from_raw_parts(public_key, 32);
         let signature_borrowed = slice::from_raw_parts(signature, 64);
         let message_sha256_borrowed = slice::from_raw_parts(message_sha256, 32);
-        return if curve25519::verify(public_key_borrowed, signature_borrowed,message_sha256_borrowed, enforce_canonical != 0) { 1 } else { 0 };
+        return if curve_api::verify(public_key_borrowed, signature_borrowed, message_sha256_borrowed, enforce_canonical != 0) { 1 } else { 0 };
     }
 }
