@@ -13,7 +13,6 @@ use once_cell::sync::Lazy;
 mod pocc;
 mod simd;
 mod shabal;
-mod curve_api;
 mod curve25519;
 
 extern "C" {
@@ -23,49 +22,49 @@ extern "C" {
         gensig: *const u8,
         best_deadline: *mut u64,
         best_offset: *mut u64,
-    ) -> ();
+    );
 }
 
 cfg_if! {
     if #[cfg(feature = "simd")] {
         extern "C" {
-            pub fn init_shabal_avx512f() -> ();
+            pub fn init_shabal_avx512f();
             pub fn find_best_deadline_avx512f(
                 scoops: *const u8,
                 nonce_count: u64,
                 gensig: *const u8,
                 best_deadline: *mut u64,
                 best_offset: *mut u64,
-            ) -> ();
+            );
 
-            pub fn init_shabal_avx2() -> ();
+            pub fn init_shabal_avx2();
             pub fn find_best_deadline_avx2(
                 scoops: *const u8,
                 nonce_count: u64,
                 gensig: *const u8,
                 best_deadline: *mut u64,
                 best_offset: *mut u64,
-            ) -> ();
+            );
 
-            pub fn init_shabal_avx() -> ();
+            pub fn init_shabal_avx();
             pub fn find_best_deadline_avx(
                 scoops: *const u8,
                 nonce_count: u64,
                 gensig: *const u8,
                 best_deadline: *mut u64,
                 best_offset: *mut u64,
-            ) -> ();
+            );
 
-            pub fn init_shabal_sse2() -> ();
+            pub fn init_shabal_sse2();
             pub fn find_best_deadline_sse2(
                 scoops: *const u8,
                 nonce_count: u64,
                 gensig: *const u8,
                 best_deadline: *mut u64,
                 best_offset: *mut u64,
-            ) -> ();
+            );
 
-            pub fn init_noncegen_sse2() -> ();
+            pub fn init_noncegen_sse2();
             pub fn noncegen_sse2(
                 cache: *mut u8,
                 numeric_ID: u64,
@@ -74,7 +73,7 @@ cfg_if! {
                 poc_version: u8,
             );
 
-            pub fn init_noncegen_avx() -> ();
+            pub fn init_noncegen_avx();
             pub fn noncegen_avx(
                 cache: *mut u8,
                 numeric_ID: u64,
@@ -83,7 +82,7 @@ cfg_if! {
                 poc_version: u8,
             );
 
-            pub fn init_noncegen_avx2() -> ();
+            pub fn init_noncegen_avx2();
             pub fn noncegen_avx2(
                 cache: *mut u8,
                 numeric_ID: u64,
@@ -92,7 +91,7 @@ cfg_if! {
                 poc_version: u8,
             );
 
-            pub fn init_noncegen_avx512f() -> ();
+            pub fn init_noncegen_avx512f();
             pub fn noncegen_avx512(
                 cache: *mut u8,
                 numeric_ID: u64,
@@ -107,14 +106,14 @@ cfg_if! {
 cfg_if! {
     if #[cfg(feature = "neon")] {
         extern "C" {
-            pub fn init_shabal_neon() -> ();
+            pub fn init_shabal_neon();
             pub fn find_best_deadline_neon(
                 scoops: *const u8,
                 nonce_count: u64,
                 gensig: *const u8,
                 best_deadline: *mut u64,
                 best_offset: *mut u64,
-            ) -> ();
+            );
         }
     }
 }
@@ -348,42 +347,42 @@ pub extern fn create_scoop(
 }
 
 #[no_mangle]
-pub extern fn curve25519_get_public_key(private_key: *const u8, public_key_buffer: *mut u8) {
-    unsafe {
-        let private_key_borrowed = slice::from_raw_parts(private_key, 32);
-        let public_key_buffer_borrowed = slice::from_raw_parts_mut(public_key_buffer, 32);
-        curve_api::get_public_key(private_key_borrowed, public_key_buffer_borrowed)
-    }
-}
-
-#[no_mangle]
-pub extern fn curve25519_get_shared_secret(private_key: *mut u8, public_key: *const u8, shared_secret_buffer: *mut u8) {
+pub extern fn curve25519_get_public_key(private_key: *mut u8, public_key_buffer: *mut u8) {
     unsafe {
         let private_key_borrowed = slice::from_raw_parts_mut(private_key, 32);
-        let public_key_borrowed = slice::from_raw_parts(public_key, 32);
-        let shared_secret_buffer_borrowed = slice::from_raw_parts_mut(shared_secret_buffer, 32);
-        curve_api::get_shared_secret(private_key_borrowed, public_key_borrowed, shared_secret_buffer_borrowed)
+        let public_key_buffer_borrowed = slice::from_raw_parts_mut(public_key_buffer, 32);
+        curve25519::get_public_key(private_key_borrowed, public_key_buffer_borrowed)
     }
 }
 
 #[no_mangle]
-pub extern fn curve25519_sign(private_key: *const u8, message_sha256: *const u8, signature_buffer: *mut u8) {
+pub extern fn curve25519_get_shared_secret(private_key: *mut u8, public_key: *mut u8, shared_secret_buffer: *mut u8) {
     unsafe {
-        let private_key_borrowed = slice::from_raw_parts(private_key, 32);
+        let private_key_borrowed = slice::from_raw_parts_mut(private_key, 32);
+        let public_key_borrowed = slice::from_raw_parts_mut(public_key, 32);
+        let shared_secret_buffer_borrowed = slice::from_raw_parts_mut(shared_secret_buffer, 32);
+        curve25519::get_shared_secret(private_key_borrowed, public_key_borrowed, shared_secret_buffer_borrowed)
+    }
+}
+
+#[no_mangle]
+pub extern fn curve25519_sign(private_key: *mut u8, message_sha256: *const u8, signature_buffer: *mut u8) {
+    unsafe {
+        let private_key_borrowed = slice::from_raw_parts_mut(private_key, 32);
         let message_sha256_borrowed = slice::from_raw_parts(message_sha256, 32);
         let signature_buffer_borrowed = slice::from_raw_parts_mut(signature_buffer, 64);
-        curve_api::sign(private_key_borrowed, message_sha256_borrowed, signature_buffer_borrowed)
+        curve25519::sign(private_key_borrowed, message_sha256_borrowed, signature_buffer_borrowed)
     }
 }
 
 /// `enforce_canonical` and the return value are u8 bools where 0 represents false and 1 represents true.
 /// So, a return value of 1 indicates successful verification and a return value of 0 indicates unsuccessful verification.
 #[no_mangle]
-pub extern fn curve25519_verify(public_key: *const u8, signature: *const u8, message_sha256: *const u8, enforce_canonical: u8) -> u8 {
+pub extern fn curve25519_verify(public_key: *mut u8, signature: *const u8, message_sha256: *const u8, enforce_canonical: u8) -> u8 {
     unsafe {
-        let public_key_borrowed = slice::from_raw_parts(public_key, 32);
+        let public_key_borrowed = slice::from_raw_parts_mut(public_key, 32);
         let signature_borrowed = slice::from_raw_parts(signature, 64);
         let message_sha256_borrowed = slice::from_raw_parts(message_sha256, 32);
-        return if curve_api::verify(public_key_borrowed, signature_borrowed, message_sha256_borrowed, enforce_canonical != 0) { 1 } else { 0 };
+        return if curve25519::verify(public_key_borrowed, signature_borrowed, message_sha256_borrowed, enforce_canonical != 0) { 1 } else { 0 };
     }
 }

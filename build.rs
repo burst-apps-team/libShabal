@@ -32,6 +32,11 @@ fn main() {
         .file("src/pocc/c/common.c")
         .compile("shabal");
 
+    config = shared_config.clone();
+    config
+        .file("src/c/curve25519.c")
+        .compile("curve25519");
+
     generate_bindings();
 
     cfg_if! {
