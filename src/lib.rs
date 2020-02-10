@@ -164,39 +164,37 @@ pub extern fn shabal_init() {
     static INITIALIZE: Once = Once::new();
     INITIALIZE.call_once(|| {
         let supported_extension: &SimdExtension = &simd::SUPPORTED_SIMD_EXTENSION;
-        unsafe {
-            match supported_extension {
-                simd::SimdExtension::AVX512f => {
-                    #[cfg(feature = "simd")] {
-                        init_shabal_avx512f();
-                        init_noncegen_avx512f();
-                    }
-                },
-                simd::SimdExtension::AVX2 => {
-                    #[cfg(feature = "simd")] {
-                        init_shabal_avx2();
-                        init_noncegen_avx2();
-                    }
-                },
-                simd::SimdExtension::AVX => {
-                    #[cfg(feature = "simd")] {
-                        init_shabal_avx();
-                        init_noncegen_avx();
-                    }
-                },
-                simd::SimdExtension::SSE2 => {
-                    #[cfg(feature = "simd")] {
-                        init_shabal_sse2();
-                        init_noncegen_sse2();
-                    }
-                },
-                simd::SimdExtension::NEON => {
-                    #[cfg(feature = "neon")] {
-                        init_shabal_neon();
-                    }
-                },
-                _ => {}
-            }
+        match supported_extension {
+            simd::SimdExtension::AVX512f => {
+                #[cfg(feature = "simd")] unsafe {
+                    init_shabal_avx512f();
+                    init_noncegen_avx512f();
+                }
+            },
+            simd::SimdExtension::AVX2 => {
+                #[cfg(feature = "simd")] unsafe {
+                    init_shabal_avx2();
+                    init_noncegen_avx2();
+                }
+            },
+            simd::SimdExtension::AVX => {
+                #[cfg(feature = "simd")] unsafe {
+                    init_shabal_avx();
+                    init_noncegen_avx();
+                }
+            },
+            simd::SimdExtension::SSE2 => {
+                #[cfg(feature = "simd")] unsafe {
+                    init_shabal_sse2();
+                    init_noncegen_sse2();
+                }
+            },
+            simd::SimdExtension::NEON => {
+                #[cfg(feature = "neon")] unsafe {
+                    init_shabal_neon();
+                }
+            },
+            _ => {}
         }
     });
 }
@@ -359,7 +357,7 @@ pub extern fn curve25519_get_public_key(private_key: *const u8, public_key_buffe
 }
 
 #[no_mangle]
-pub extern fn curve25519_get_shared_secret(private_key: *const u8, public_key: *const u8, shared_secret_buffer: *mut u8) {
+pub extern fn curve25519_get_shared_secret(private_key: *mut u8, public_key: *const u8, shared_secret_buffer: *mut u8) {
     unsafe {
         let private_key_borrowed = slice::from_raw_parts_mut(private_key, 32);
         let public_key_borrowed = slice::from_raw_parts(public_key, 32);
