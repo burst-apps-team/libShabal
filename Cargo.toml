@@ -16,7 +16,6 @@ neon = []
 [dependencies]
 libc = "0.2.66"
 cfg-if = "0.1.10"
-hex = "0.4.0"
 shabal = "0.2.0"
 once_cell = "1.3.1"
 sha2 = "0.8.1"

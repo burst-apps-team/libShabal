@@ -3,11 +3,11 @@ use sha2::{Sha256, Digest};
 use std::intrinsics::copy_nonoverlapping;
 
 extern "C" {
-    fn curve25519_c_keygen(p: *mut u8, s: *mut u8, k: *mut u8);
-    fn curve25519_c_sign(v: *mut u8, h: *mut u8, x: *mut u8, s: *mut u8);
-    fn curve25519_c_verify(y: *mut u8, v: *mut u8, h: *mut u8, p: *mut u8);
-    fn curve25519_c_isCanonicalSignature(signature: *const u8) -> u8;
-    fn curve25519_c_isCanonicalPublicKey(public_key: *const u8) -> u8;
+    pub fn curve25519_c_keygen(p: *mut u8, s: *mut u8, k: *mut u8);
+    pub fn curve25519_c_sign(v: *mut u8, h: *mut u8, x: *mut u8, s: *mut u8);
+    pub fn curve25519_c_verify(y: *mut u8, v: *mut u8, h: *mut u8, p: *mut u8);
+    pub fn curve25519_c_isCanonicalSignature(signature: *const u8) -> u8;
+    pub fn curve25519_c_isCanonicalPublicKey(public_key: *const u8) -> u8;
 }
 
 pub fn get_public_key(private_key: &mut [u8], public_key_buffer: &mut [u8]) {
@@ -47,8 +47,10 @@ pub extern fn sign(private_key: &mut [u8], message_sha256: &[u8], signature_buff
 
 pub extern fn verify(public_key: &mut [u8], signature: &[u8], message_sha256: &[u8], enforce_canonical: bool) -> bool {
     unsafe {
-        if curve25519_c_isCanonicalPublicKey(public_key.as_ptr()) == 0 { return false; }
-        if curve25519_c_isCanonicalSignature(signature.as_ptr()) == 0 { return false; }
+        if enforce_canonical {
+            if curve25519_c_isCanonicalPublicKey(public_key.as_ptr()) == 0 { return false; }
+            if curve25519_c_isCanonicalSignature(signature.as_ptr()) == 0 { return false; }
+        }
 
         let mut y: [u8; 32] = [0; 32];
         let mut v: [u8; 32] = [0; 32];

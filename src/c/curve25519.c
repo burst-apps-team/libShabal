@@ -208,11 +208,7 @@ void pack(LL10 *x, BYTE *m) {
 
 /* Copy a number */
 void cpy(LL10 *out, LL10 *in) {
-    out->_0=in->_0; out->_1=in->_1;
-    out->_2=in->_2; out->_3=in->_3;
-    out->_4=in->_4; out->_5=in->_5;
-    out->_6=in->_6; out->_7=in->_7;
-    out->_8=in->_8; out->_9=in->_9;
+    memcpy(out, in, sizeof(LL10));
 }
 
 /* Set a number to value, which must be in range -185861411 .. 185861411 */
@@ -760,14 +756,10 @@ void curve25519_c_verify(BYTE *Y, BYTE *v, BYTE *h, BYTE *P) {
 
 BYTE curve25519_c_isCanonicalSignature(BYTE *v) {
     BYTE vCopy[32];
-    // todo memcpy
-    int i; for(i = 0; i < 32; i++) vCopy[i] = v[i];
+    memcpy(vCopy, v, 32);
     BYTE tmp[32] = {0};
     divmod(tmp, vCopy, 32, ORDER, 32);
-    for (i = 0; i < 32; i++) {
-        if (v[i] != vCopy[i]) return 0;
-    }
-    return 1;
+    return memcmp(v, vCopy, 32) == 0 ? 1 : 0;
 }
 
 BYTE curve25519_c_isCanonicalPublicKey(BYTE *publicKey) {
@@ -775,149 +767,5 @@ BYTE curve25519_c_isCanonicalPublicKey(BYTE *publicKey) {
     unpack(&publicKeyUnpacked, publicKey);
     BYTE publicKeyCopy[32];
     pack(&publicKeyUnpacked, publicKeyCopy);
-    int i; for (i = 0; i < 32; i++){
-        if (publicKeyCopy[i] != publicKey[i]) return 0;
-    }
-    return 1;
+    return memcmp(publicKey, publicKeyCopy, 32) == 0 ? 1 : 0;
 }
-
-/************** Interface *************/
-
-/* The main() function below, along with several utility functions,
- * provides an interface to the curve25519 functions above.
- *
- * Usage: curve25519 -[gGsvk] hexString64 ...
- *
- * curve25519 is the name of the executable (compilation of this file).
- *
- * -g: generate signing key pair, given random hexString64
- *     returns: signingPublicKey signingPrivateKey
- * -G: generate key agreement key pair, given random hexString64
- *     returns: keyAgreementPublicKey keyAgreementPrivateKey
- * -s: sign, given signatureHash keyAgreementPrivateKey signingPrivateKey
- *     returns: signatureValue
- * -v: verify, given signatureValue signatureHash signingPublicKey
- *     returns: keyAgreementPublicKey
- * -k: generate shared secret, given myKeyAgreementPrivateKey yourKeyAgreementPublicKey
- *     returns: sharedSecret
- *
- * All input arguments hexString64 are 64-digit hex strings.
- * Output consists of one or two 64-digit hex strings, separated by a space.
- * Errors: reported to stderr; stdout is empty; exit code is 1.
- */
-//
-//void hexStringToByteArray(BYTE *b, char *str) {
-//    int i = 64, j = 32;
-//    LL ll;
-//    char s[i + 1];
-//    strcpy(s, str);
-//    do {
-//        i -= 8;
-//        ll = strtoll(s + i, NULL, 16);
-//        int k; for(k = 0; k < 4; k++) {
-//            b[--j] = ll & 0xff;
-//            ll >>= 8;
-//        }
-//        s[i] = '\0';
-//    } while(i > 0);
-//}
-//
-//void byteArrayToHexString(char *s, BYTE *b) {
-//    int i = 64, j = 32;
-//    s[i] = '\0';
-//    char hexDigits[] = "0123456789ABCDEF";
-//    do {
-//        BYTE c = b[--j];
-//        s[--i] = hexDigits[c & 0xf];
-//        s[--i] = hexDigits[c >> 4];
-//    } while(j > 0);
-//}
-//
-//int isHexString64(char *s) {
-//    int len = strlen(s);
-//    if(len != 64) return 0;
-//    while(--len >= 0) {
-//        if(!isxdigit(s[len])) return 0;
-//    }
-//    return 1;
-//}
-//
-//void terminate(int code, char *specific) {
-//    char *general;
-//    switch(code) {
-//        case 0: general = "Usage"; break;
-//        case 1: general = "Required 64-digit hex string(s)"; break;
-//        case 2: default: general = "Error";
-//    }
-//    fprintf(stderr, "%s: %s\n", general, specific);
-//    exit(1);
-//}
-
-//char USAGE[] = "curve25519 -[gGsvk] hexString64 ...";
-//
-//int main(int argc, char **argv) {
-//    if(sizeof(LL) < 8 || sizeof(int) < 4 || sizeof(BYTE) > 1)
-//        terminate(2, "invalid data type found on this system");
-//    if(argc < 2 || argv[1][0] != '-' || strlen(argv[1]) < 2) terminate(0, USAGE);
-//    char c = argv[1][1];
-//    switch(c) {
-//        case 'g': { // generate key pair for signing
-//            if(argc != 3 || !isHexString64(argv[2])) terminate(1, "random");
-//            BYTE P[32], s[32], k[32];
-//            hexStringToByteArray(k, argv[2]);
-//            keygen(P, s, k);
-//            char Pstr[65]; byteArrayToHexString(Pstr, P); // signingPublicKey
-//            char sstr[65]; byteArrayToHexString(sstr, s); // signingPrivateKey
-//            printf("%s %s\n", Pstr, sstr);
-//            break;
-//        }
-//        case 'G': { // generate key pair for key agreement
-//            if(argc != 3 || !isHexString64(argv[2])) terminate(1, "random");
-//            BYTE P[32], k[32];
-//            hexStringToByteArray(k, argv[2]);
-//            keygen(P, NULL, k);
-//            char Pstr[65]; byteArrayToHexString(Pstr, P); // keyAgreementPublicKey
-//            char kstr[65]; byteArrayToHexString(kstr, k); // keyAgreementPrivateKey
-//            printf("%s %s\n", Pstr, kstr);
-//            break;
-//        }
-//        case 's': { // sign
-//            if(argc != 5 || !isHexString64(argv[2]) || !isHexString64(argv[3]) || !isHexString64(argv[4]))
-//                terminate(1, "signatureHash keyAgreementPrivateKey signingPrivateKey");
-//            BYTE v[32], h[32], x[32], s[32];
-//            hexStringToByteArray(h, argv[2]);
-//            hexStringToByteArray(x, argv[3]);
-//            hexStringToByteArray(s, argv[4]);
-//            if(!sign(v, h, x, s)) terminate(2, "signing failed");
-//            char vs[65]; byteArrayToHexString(vs, v); puts(vs); // signatureValue
-//            break;
-//        }
-//        case 'v': { // verify
-//            if(argc != 5 || !isHexString64(argv[2]) || !isHexString64(argv[3]) || !isHexString64(argv[4]))
-//                terminate(1, "signatureValue signatureHash signingPublicKey");
-//            BYTE Y[32], v[32], h[32], P[32];
-//            hexStringToByteArray(v, argv[2]);
-//            hexStringToByteArray(h, argv[3]);
-//            hexStringToByteArray(P, argv[4]);
-//            if(!isCanonicalSignature(v)) terminate(2, "signature is not canonical");
-//            if(!isCanonicalPublicKey(P)) terminate(2, "public key is not canonical");
-//            verify(Y, v, h, P);
-//            char Ys[65]; byteArrayToHexString(Ys, Y); puts(Ys); // keyAgreementPublicKey
-//            break;
-//        }
-//        case 'k': { // generate shared secret (key agreement)
-//            if(argc != 4 || !isHexString64(argv[2]) || !isHexString64(argv[3]))
-//                terminate(1, "myKeyAgreementPrivateKey yourKeyAgreementPublicKey");
-//            BYTE Z[32], k[32], P[32];
-//            hexStringToByteArray(k, argv[2]);
-//            hexStringToByteArray(P, argv[3]);
-//            curve(Z, k, P);
-//            char Zs[65]; byteArrayToHexString(Zs, Z); puts(Zs); // sharedSecret
-//            break;
-//        }
-//        default:
-//            terminate(0, USAGE);
-//            break;
-//    }
-//    exit(0);
-//}
