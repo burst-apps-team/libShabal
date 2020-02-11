@@ -344,7 +344,7 @@ pub extern fn create_scoop(
     );
     let scoop_buffer_borrowed = unsafe { slice::from_raw_parts_mut(offset_scoop_buffer, SCOOP_SIZE) };
     let offset = scoop as usize * SCOOP_SIZE;
-    scoop_buffer_borrowed.clone_from_slice(&buffer[offset..offset + SCOOP_SIZE]);
+    scoop_buffer_borrowed.copy_from_slice(&buffer[offset..offset + SCOOP_SIZE]);
 }
 
 #[no_mangle]

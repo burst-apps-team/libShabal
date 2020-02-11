@@ -26,11 +26,11 @@ pub fn noncegen_rust(
 
     // prepare termination strings
     let mut t1 = [0u32; MESSAGE_SIZE];
-    t1[0..2].clone_from_slice(&numeric_id);
+    t1[0..2].copy_from_slice(&numeric_id);
     t1[4] = 0x80;
 
     let mut t2 = [0u32; MESSAGE_SIZE];
-    t2[8..10].clone_from_slice(&numeric_id);
+    t2[8..10].copy_from_slice(&numeric_id);
     t2[12] = 0x80;
 
     let mut t3 = [0u32; MESSAGE_SIZE];
@@ -46,8 +46,8 @@ pub fn noncegen_rust(
         let nonce: [u32; 2] = unsafe { std::mem::transmute((local_startnonce + n).to_be()) };
 
         // store nonce numbers in relevant termination strings
-        t1[2..4].clone_from_slice(&nonce);
-        t2[10..12].clone_from_slice(&nonce);
+        t1[2..4].copy_from_slice(&nonce);
+        t2[10..12].copy_from_slice(&nonce);
 
         // start shabal rounds
 
@@ -58,11 +58,11 @@ pub fn noncegen_rust(
         // round 1
         let hash = shabal256_fast(&[], &t1);
 
-        buffer[NONCE_SIZE - HASH_SIZE..NONCE_SIZE].clone_from_slice(&hash);
+        buffer[NONCE_SIZE - HASH_SIZE..NONCE_SIZE].copy_from_slice(&hash);
         let hash = unsafe { std::mem::transmute::<[u8; 32], [u32; 8]>(hash) };
 
         // store first hash into smart termination string 2
-        t2[0..8].clone_from_slice(&hash);
+        t2[0..8].copy_from_slice(&hash);
         // round 2 - 128
         for i in (NONCE_SIZE - HASH_CAP + HASH_SIZE..=NONCE_SIZE - HASH_SIZE).rev().step_by(HASH_SIZE) {
             // check if msg can be divided into 512bit packages without a
@@ -70,22 +70,22 @@ pub fn noncegen_rust(
             if i % 64 == 0 {
                 // last msg = seed + termination
                 let hash = &shabal256_fast(&buffer[i..NONCE_SIZE], &t1);
-                buffer[i - HASH_SIZE..i].clone_from_slice(hash);
+                buffer[i - HASH_SIZE..i].copy_from_slice(hash);
             } else {
                 // last msg = 256 bit data + seed + termination
                 let hash = &shabal256_fast(&buffer[i..NONCE_SIZE], &t2);
-                buffer[i - HASH_SIZE..i].clone_from_slice(hash);
+                buffer[i - HASH_SIZE..i].copy_from_slice(hash);
             }
         }
 
         // round 128-8192
         for i in (HASH_SIZE..=NONCE_SIZE - HASH_CAP).rev().step_by(HASH_SIZE) {
             let hash = &shabal256_fast(&buffer[i..i + HASH_CAP], &t3);
-            buffer[i - HASH_SIZE..i].clone_from_slice(hash);
+            buffer[i - HASH_SIZE..i].copy_from_slice(hash);
         }
 
         // generate final hash
-        final_buffer.clone_from_slice(&shabal256_fast(&buffer[0..NONCE_SIZE], &t1));
+        final_buffer.copy_from_slice(&shabal256_fast(&buffer[0..NONCE_SIZE], &t1));
 
         // XOR with final
         for i in 0..NONCE_SIZE {
@@ -122,11 +122,11 @@ pub fn noncegen_single_rust(
 
     // prepare termination strings
     let mut t1 = [0u32; MESSAGE_SIZE];
-    t1[0..2].clone_from_slice(&numeric_id);
+    t1[0..2].copy_from_slice(&numeric_id);
     t1[4] = 0x80;
 
     let mut t2 = [0u32; MESSAGE_SIZE];
-    t2[8..10].clone_from_slice(&numeric_id);
+    t2[8..10].copy_from_slice(&numeric_id);
     t2[12] = 0x80;
 
     let mut t3 = [0u32; MESSAGE_SIZE];
@@ -136,8 +136,8 @@ pub fn noncegen_single_rust(
     let nonce: [u32; 2] = unsafe { std::mem::transmute(nonce.to_be()) };
 
     // store nonce numbers in relevant termination strings
-    t1[2..4].clone_from_slice(&nonce);
-    t2[10..12].clone_from_slice(&nonce);
+    t1[2..4].copy_from_slice(&nonce);
+    t2[10..12].copy_from_slice(&nonce);
 
     // start shabal rounds
 
@@ -148,11 +148,11 @@ pub fn noncegen_single_rust(
     // round 1
     let hash = shabal256_fast(&[], &t1);
 
-    cache[NONCE_SIZE - HASH_SIZE..NONCE_SIZE].clone_from_slice(&hash);
+    cache[NONCE_SIZE - HASH_SIZE..NONCE_SIZE].copy_from_slice(&hash);
     let hash = unsafe { std::mem::transmute::<[u8; 32], [u32; 8]>(hash) };
 
     // store first hash into smart termination string 2
-    t2[0..8].clone_from_slice(&hash);
+    t2[0..8].copy_from_slice(&hash);
     // round 2 - 128
     for i in (NONCE_SIZE - HASH_CAP + HASH_SIZE..=NONCE_SIZE - HASH_SIZE)
         .rev()
@@ -163,22 +163,22 @@ pub fn noncegen_single_rust(
             if i % 64 == 0 {
                 // last msg = seed + termination
                 let hash = &shabal256_fast(&cache[i..NONCE_SIZE], &t1);
-                cache[i - HASH_SIZE..i].clone_from_slice(hash);
+                cache[i - HASH_SIZE..i].copy_from_slice(hash);
             } else {
                 // last msg = 256 bit data + seed + termination
                 let hash = &shabal256_fast(&cache[i..NONCE_SIZE], &t2);
-                cache[i - HASH_SIZE..i].clone_from_slice(hash);
+                cache[i - HASH_SIZE..i].copy_from_slice(hash);
             }
         }
 
     // round 128-8192
     for i in (HASH_SIZE..=NONCE_SIZE - HASH_CAP).rev().step_by(HASH_SIZE) {
         let hash = &shabal256_fast(&cache[i..i + HASH_CAP], &t3);
-        cache[i - HASH_SIZE..i].clone_from_slice(hash);
+        cache[i - HASH_SIZE..i].copy_from_slice(hash);
     }
 
     // generate final hash
-    final_buffer.clone_from_slice(&shabal256_fast(&cache[0..NONCE_SIZE], &t1));
+    final_buffer.copy_from_slice(&shabal256_fast(&cache[0..NONCE_SIZE], &t1));
 
     // XOR with final
     for i in 0..NONCE_SIZE {
