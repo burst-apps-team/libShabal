@@ -213,6 +213,9 @@ pub extern fn shabal_findBestDeadline(
 /// Returns a pointer to the instance, which
 /// can be used with the other functions to
 /// manipulate the instance.
+///
+/// This implementation of Shabal256 is not particularly
+/// fast but is here for completeness.
 #[no_mangle]
 pub extern fn shabal256_new() -> *mut c_void {
     return shabal::shabal256_new()

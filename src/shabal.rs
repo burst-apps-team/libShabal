@@ -2,8 +2,6 @@ use shabal::{Shabal256, Digest};
 use std::os::raw::c_void;
 use std::slice;
 
-// TODO create bindings to the C version which is faster
-
 pub fn shabal256_new() -> *mut c_void {
     return Box::into_raw(Box::new(Shabal256::new())) as *mut c_void;
 }
