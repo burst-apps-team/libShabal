@@ -15,7 +15,8 @@
 #include <string.h>
 #include <ctype.h> // isxdigit
 
-typedef unsigned char BYTE;
+#include "curve25519.h"
+
 typedef long long LL;
 typedef struct {LL _0, _1, _2, _3, _4, _5, _6, _7, _8, _9;} LL10;
 
@@ -619,7 +620,7 @@ void curve25519_c_keygen(BYTE *P, BYTE *s, BYTE *k) {
  *   s  [in]  private key for signing
  * returns true on success, false on failure (use different x or h)
  */
-int curve25519_c_sign(BYTE *v, BYTE *h, BYTE *x, BYTE *s) {
+void curve25519_c_sign(BYTE *v, BYTE *h, BYTE *x, BYTE *s) {
     // v = (x - h) s  mod q
     int w, i;
     BYTE h1[32], x1[32];
@@ -645,7 +646,6 @@ int curve25519_c_sign(BYTE *v, BYTE *h, BYTE *x, BYTE *s) {
     divmod(tmp2, tmp1, 64, ORDER, 32);
 
     for (w = 0, i = 0; i < 32; i++) w |= (v[i] = tmp1[i]);
-    return w != 0;
 }
 
 /* Signature verification primitive, calculates Y = vP + hG

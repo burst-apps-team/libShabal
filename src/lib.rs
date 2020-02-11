@@ -1,6 +1,4 @@
-extern crate libc;
-#[macro_use]
-extern crate cfg_if;
+use cfg_if::cfg_if;
 use std::sync::{Once};
 use std::{u64, slice};
 use std::os::raw::c_void;
@@ -119,7 +117,7 @@ cfg_if! {
 }
 
 static VERSION: Lazy<CString> = Lazy::new(|| {
-    return CString::new("v1.3.0").expect("Failed to create version string");
+    return CString::new("v".to_owned() + env!("CARGO_PKG_VERSION")).expect("Failed to create version string");
 });
 
 #[no_mangle]

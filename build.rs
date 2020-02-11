@@ -1,7 +1,4 @@
-extern crate cc;
-#[macro_use]
-extern crate cfg_if;
-extern crate cbindgen;
+use cfg_if::cfg_if;
 
 use std::env;
 use std::path::PathBuf;

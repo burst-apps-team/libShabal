@@ -1,4 +1,3 @@
-extern crate once_cell;
 use once_cell::sync::Lazy;
 
 #[derive(Debug, Clone)]
