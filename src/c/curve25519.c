@@ -576,6 +576,10 @@ void curve25519_c_keygen(BYTE *P, BYTE *s, BYTE *k) {
     core(P, s, k, NULL);
 }
 
+void curve25519_c_curve(BYTE *Z, BYTE *k, BYTE *P) {
+    core(Z, NULL, k, P);
+}
+
 /********* DIGITAL SIGNATURES *********/
 
 /* deterministic EC-KCDSA

@@ -4,6 +4,7 @@ use std::intrinsics::copy_nonoverlapping;
 
 extern "C" {
     pub fn curve25519_c_keygen(p: *mut u8, s: *mut u8, k: *mut u8);
+    pub fn curve25519_c_curve(z: *mut u8, k: *mut u8, p: *mut u8);
     pub fn curve25519_c_sign(v: *mut u8, h: *mut u8, x: *mut u8, s: *mut u8);
     pub fn curve25519_c_verify(y: *mut u8, v: *mut u8, h: *mut u8, p: *mut u8);
     pub fn curve25519_c_isCanonicalSignature(signature: *const u8) -> u8;
@@ -18,7 +19,7 @@ pub fn get_public_key(private_key: &mut [u8], public_key_buffer: &mut [u8]) {
 
 pub extern fn get_shared_secret(private_key: &mut [u8], public_key: &mut [u8], shared_secret_buffer: &mut [u8]) {
     unsafe {
-        curve25519_c_keygen(shared_secret_buffer.as_mut_ptr(), private_key.as_mut_ptr(), public_key.as_mut_ptr())
+        curve25519_c_curve(shared_secret_buffer.as_mut_ptr(), private_key.as_mut_ptr(), public_key.as_mut_ptr())
     }
 }
 
